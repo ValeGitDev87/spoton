@@ -106,6 +106,7 @@
         <div class="row">
           <button onclick="register()">Register</button>
           <button onclick="login()">Login</button>
+          <button class="secondary" onclick="fillAdmin()">Usa admin</button>
           <button class="secondary" onclick="logout()">Logout</button>
         </div>
       </section>
@@ -136,6 +137,44 @@
           <button onclick="me()">Me</button>
           <button onclick="locations()">Locations</button>
           <button onclick="nearby()">Nearby</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Admin luoghi</h2>
+        <label for="locationId">Location UUID</label>
+        <input id="locationId" placeholder="Serve per modifica/elimina">
+        <label for="locationName">Nome</label>
+        <input id="locationName" value="Test Location">
+        <label for="locationCity">Citta</label>
+        <input id="locationCity" value="Napoli">
+        <div class="grid2">
+          <div>
+            <label for="locationLat">Latitudine</label>
+            <input id="locationLat" value="40.8518">
+          </div>
+          <div>
+            <label for="locationLng">Longitudine</label>
+            <input id="locationLng" value="14.2681">
+          </div>
+        </div>
+        <div class="grid2">
+          <div>
+            <label for="locationType">Tipo</label>
+            <input id="locationType" value="altro">
+          </div>
+          <div>
+            <label for="locationRadius">Raggio metri</label>
+            <input id="locationRadius" value="100">
+          </div>
+        </div>
+        <label for="locationIcon">Icona</label>
+        <input id="locationIcon" value="map-pin">
+        <div class="row">
+          <button onclick="adminLocations()">Lista admin</button>
+          <button onclick="createLocation()">Crea</button>
+          <button onclick="updateLocation()">Modifica</button>
+          <button class="secondary" onclick="deleteLocation()">Elimina</button>
         </div>
       </section>
     </div>
@@ -220,6 +259,13 @@
       setToken(payload.data?.token);
     }
 
+    function fillAdmin() {
+      document.getElementById("displayName").value = "Admin SpotOn";
+      document.getElementById("email").value = "admin@spoton.local";
+      document.getElementById("password").value = "password123";
+      write("Credenziali admin compilate. Ora premi Login.");
+    }
+
     async function login() {
       const payload = await request("/api/auth/login", {
         method: "POST",
@@ -249,6 +295,50 @@
       const lng = encodeURIComponent(document.getElementById("lng").value);
       const radius = encodeURIComponent(document.getElementById("radiusKm").value);
       await request(`/api/locations/nearby?lat=${lat}&lng=${lng}&radius_km=${radius}`);
+    }
+
+    function locationPayload() {
+      return {
+        name: document.getElementById("locationName").value,
+        city: document.getElementById("locationCity").value,
+        latitude: Number(document.getElementById("locationLat").value),
+        longitude: Number(document.getElementById("locationLng").value),
+        type: document.getElementById("locationType").value,
+        geo_radius_meters: Number(document.getElementById("locationRadius").value),
+        icon: document.getElementById("locationIcon").value,
+        is_active: true,
+      };
+    }
+
+    async function adminLocations() {
+      await request("/api/admin/locations");
+    }
+
+    async function createLocation() {
+      const payload = await request("/api/admin/locations", {
+        method: "POST",
+        body: JSON.stringify(locationPayload()),
+      });
+      if (payload.data?.id) document.getElementById("locationId").value = payload.data.id;
+    }
+
+    async function updateLocation() {
+      const id = document.getElementById("locationId").value.trim();
+      if (!id) return write("Inserisci Location UUID.");
+
+      await request(`/api/admin/locations/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify(locationPayload()),
+      });
+    }
+
+    async function deleteLocation() {
+      const id = document.getElementById("locationId").value.trim();
+      if (!id) return write("Inserisci Location UUID.");
+
+      await request(`/api/admin/locations/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
     }
 
     window.addEventListener("unhandledrejection", (event) => {

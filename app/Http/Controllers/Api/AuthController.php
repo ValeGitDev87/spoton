@@ -74,6 +74,7 @@ class AuthController extends Controller
             'email' => $user->email,
             'display_name' => $user->display_name,
             'avatar_color' => $user->avatar_color,
+            'is_admin' => $user->is_admin,
         ];
     }
 }

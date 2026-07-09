@@ -22,6 +22,7 @@ class User extends Authenticatable
         'password',
         'display_name',
         'avatar_color',
+        'is_admin',
         'last_known_latitude',
         'last_known_longitude',
         'last_location_update',
@@ -40,6 +41,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'is_admin' => 'boolean',
             'last_location_update' => 'datetime',
             'password' => 'hashed',
         ];

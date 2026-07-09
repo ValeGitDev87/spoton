@@ -10,8 +10,13 @@ return new class extends Migration
     public function up(): void
     {
         if (DB::getDriverName() === 'pgsql') {
-            DB::statement('CREATE EXTENSION IF NOT EXISTS postgis');
-            DB::statement('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+            if (DB::selectOne("SELECT 1 FROM pg_available_extensions WHERE name = 'postgis'")) {
+                DB::statement('CREATE EXTENSION IF NOT EXISTS postgis');
+            }
+
+            if (DB::selectOne("SELECT 1 FROM pg_available_extensions WHERE name = 'uuid-ossp'")) {
+                DB::statement('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"');
+            }
         }
 
         Schema::create('locations', function (Blueprint $table) {

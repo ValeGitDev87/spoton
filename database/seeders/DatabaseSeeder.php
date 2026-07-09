@@ -21,12 +21,14 @@ class DatabaseSeeder extends Seeder
             'display_name' => 'Test User',
             'email' => 'test@example.com',
             'password' => Hash::make('password123'),
+            'is_admin' => false,
         ]);
 
         User::factory()->create([
             'display_name' => 'Admin SpotOn',
             'email' => 'admin@spoton.local',
             'password' => Hash::make('password123'),
+            'is_admin' => true,
         ]);
 
         $locations = [
