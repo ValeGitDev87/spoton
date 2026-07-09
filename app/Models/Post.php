@@ -1,0 +1,58 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Post extends Model
+{
+    use HasFactory, HasUuids;
+
+    protected $fillable = [
+        'author_id',
+        'location_id',
+        'text',
+        'musica',
+        'sighting_date',
+        'expires_at',
+        'like_count',
+        'comment_count',
+        'share_count',
+        'io_cero_count',
+        'status',
+    ];
+
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
+    protected function casts(): array
+    {
+        return [
+            'sighting_date' => 'date',
+            'expires_at' => 'datetime',
+            'like_count' => 'integer',
+            'comment_count' => 'integer',
+            'share_count' => 'integer',
+            'io_cero_count' => 'integer',
+        ];
+    }
+
+    public function author(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'author_id');
+    }
+
+    public function location(): BelongsTo
+    {
+        return $this->belongsTo(Location::class);
+    }
+
+    public function isActive(): bool
+    {
+        return $this->status === 'active' && $this->expires_at->isFuture();
+    }
+}

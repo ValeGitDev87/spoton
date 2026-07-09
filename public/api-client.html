@@ -137,6 +137,29 @@
           <button onclick="me()">Me</button>
           <button onclick="locations()">Locations</button>
           <button onclick="nearby()">Nearby</button>
+          <button onclick="mapData()">Map</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Annunci</h2>
+        <label for="postId">Post UUID</label>
+        <input id="postId" placeholder="Serve per dettaglio/modifica/rimozione">
+        <label for="postLocationId">Location UUID</label>
+        <input id="postLocationId" placeholder="Prendilo dalla lista locations">
+        <label for="postText">Testo annuncio</label>
+        <input id="postText" value="Ti ho vista vicino al mare, avevi un sorriso impossibile da dimenticare.">
+        <label for="postMusica">Musica / ritornello</label>
+        <input id="postMusica" value="Quel ritornello che faceva la la la">
+        <label for="postDate">Data avvistamento</label>
+        <input id="postDate" type="date">
+        <div class="row">
+          <button onclick="posts()">Lista</button>
+          <button onclick="createPost()">Crea</button>
+          <button onclick="postDetail()">Dettaglio</button>
+          <button onclick="updatePost()">Modifica</button>
+          <button class="secondary" onclick="deletePost()">Rimuovi</button>
+          <button onclick="nearbyPosts()">Nearby posts</button>
         </div>
       </section>
 
@@ -287,7 +310,8 @@
     }
 
     async function locations() {
-      await request("/api/locations");
+      const payload = await request("/api/locations");
+      if (payload.data?.[0]?.id) document.getElementById("postLocationId").value = payload.data[0].id;
     }
 
     async function nearby() {
@@ -295,6 +319,71 @@
       const lng = encodeURIComponent(document.getElementById("lng").value);
       const radius = encodeURIComponent(document.getElementById("radiusKm").value);
       await request(`/api/locations/nearby?lat=${lat}&lng=${lng}&radius_km=${radius}`);
+    }
+
+    async function mapData() {
+      const lat = encodeURIComponent(document.getElementById("lat").value);
+      const lng = encodeURIComponent(document.getElementById("lng").value);
+      const radius = encodeURIComponent(document.getElementById("radiusKm").value);
+      await request(`/api/map?lat=${lat}&lng=${lng}&radius_km=${radius}`);
+    }
+
+    function postPayload() {
+      return {
+        location_id: document.getElementById("postLocationId").value,
+        text: document.getElementById("postText").value,
+        musica: document.getElementById("postMusica").value || null,
+        sighting_date: document.getElementById("postDate").value,
+      };
+    }
+
+    async function posts() {
+      await request("/api/posts");
+    }
+
+    async function createPost() {
+      const payload = await request("/api/posts", {
+        method: "POST",
+        body: JSON.stringify(postPayload()),
+      });
+      if (payload.data?.id) document.getElementById("postId").value = payload.data.id;
+    }
+
+    async function postDetail() {
+      const id = document.getElementById("postId").value.trim();
+      if (!id) return write("Inserisci Post UUID.");
+
+      await request(`/api/posts/${encodeURIComponent(id)}`);
+    }
+
+    async function updatePost() {
+      const id = document.getElementById("postId").value.trim();
+      if (!id) return write("Inserisci Post UUID.");
+
+      await request(`/api/posts/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          text: document.getElementById("postText").value,
+          musica: document.getElementById("postMusica").value || null,
+          sighting_date: document.getElementById("postDate").value,
+        }),
+      });
+    }
+
+    async function deletePost() {
+      const id = document.getElementById("postId").value.trim();
+      if (!id) return write("Inserisci Post UUID.");
+
+      await request(`/api/posts/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+    }
+
+    async function nearbyPosts() {
+      const lat = encodeURIComponent(document.getElementById("lat").value);
+      const lng = encodeURIComponent(document.getElementById("lng").value);
+      const radius = encodeURIComponent(document.getElementById("radiusKm").value);
+      await request(`/api/posts/nearby?lat=${lat}&lng=${lng}&radius_km=${radius}`);
     }
 
     function locationPayload() {
@@ -320,6 +409,7 @@
         body: JSON.stringify(locationPayload()),
       });
       if (payload.data?.id) document.getElementById("locationId").value = payload.data.id;
+      if (payload.data?.id) document.getElementById("postLocationId").value = payload.data.id;
     }
 
     async function updateLocation() {
@@ -346,6 +436,7 @@
     });
 
     renderToken();
+    document.getElementById("postDate").value = new Date().toISOString().split("T")[0];
   </script>
 </body>
 </html>

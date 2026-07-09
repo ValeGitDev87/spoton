@@ -49,7 +49,7 @@ API:
 
 ## Step 2 - Admin Luoghi
 
-Stato: completato localmente.
+Stato: completato.
 
 Incluso:
 
@@ -83,12 +83,127 @@ Nota PostgreSQL/PostGIS:
 
 ---
 
-## Prossimo Step
+## Step 3 - Frontend Admin Luoghi
 
-Step 3 consigliato:
+Stato: completato localmente.
 
-- posts / annunci;
+Incluso:
+
+- login web con sessione Laravel;
+- route `/login` e `/logout`;
+- area `/admin/locations` protetta da login e flag `users.is_admin`;
+- lista luoghi con ricerca;
+- form creazione luogo;
+- form modifica luogo;
+- eliminazione luogo;
+- campi coordinate obbligatori:
+  - latitudine;
+  - longitudine;
+  - raggio metri;
+- test automatici su guest, non-admin, admin, creazione e modifica coordinate.
+
+Route web:
+
+- `GET /login`
+- `POST /login`
+- `POST /logout`
+- `GET /admin/locations`
+- `GET /admin/locations/create`
+- `POST /admin/locations`
+- `GET /admin/locations/{location}/edit`
+- `PATCH /admin/locations/{location}`
+- `DELETE /admin/locations/{location}`
+
+Credenziali seed admin:
+
+```text
+admin@spoton.local
+password123
+```
+
+Verifiche locali:
+
+- `php artisan migrate:fresh --seed` OK;
+- `php artisan test` OK: 22 test, 78 assertion.
+
+---
+
+## Step 4 - Posts / Annunci
+
+Stato: completato localmente.
+
+Incluso:
+
 - relazione con location;
 - campo `musica`;
 - scadenza 24h;
-- prime API create/list/detail.
+- validazione data avvistamento non futura;
+- lista annunci con ricerca, status e filtro location;
+- dettaglio annuncio;
+- modifica solo owner o admin;
+- rimozione logica con `status=removed`;
+- response con counter iniziali a zero.
+
+API:
+
+- `GET /api/posts`
+- `POST /api/posts`
+- `GET /api/posts/{post}`
+- `PATCH /api/posts/{post}`
+- `DELETE /api/posts/{post}`
+
+Verifiche locali:
+
+- `php artisan migrate:fresh --seed` OK;
+- `php artisan test` OK;
+- creazione post provata via HTTP locale;
+- risposta creazione post verificata con `like_count`, `comment_count`, `share_count`, `io_cero_count` a zero.
+
+---
+
+## Step 5 - Feed Nearby / Map API
+
+Stato: completato localmente.
+
+Incluso:
+
+- endpoint annunci vicini a lat/lng entro raggio km;
+- endpoint mappa con locations e posts vicini;
+- distanza `distance_km` calcolata rispetto alla posizione utente;
+- esclusione post scaduti da nearby/map;
+- client test aggiornato con sezione Annunci e bottone Map.
+
+API:
+
+- `GET /api/posts/nearby?lat=...&lng=...&radius_km=200`
+- `GET /api/map?lat=...&lng=...&radius_km=200`
+
+Verifiche locali:
+
+- `php artisan test` OK: 17 test, 64 assertion;
+- nearby posts provato via HTTP locale;
+- map endpoint provato via HTTP locale.
+
+---
+
+## Step Finale Previsto - Fake Seeder Completo
+
+Da fare quando le API principali saranno pronte.
+
+Obiettivo:
+
+- generare utenti fake;
+- generare luoghi fake/reali;
+- generare annunci fake con `musica`;
+- generare like, Io c'ero, storie e chat quando saranno implementati;
+- provare tutte le API dal client `public/api-client.html` e via curl.
+
+---
+
+## Prossimo Step
+
+Step 6 consigliato:
+
+- storie 24h;
+- job scadenza annunci;
+- endpoint `GET /api/locations/{location}/stories`.
