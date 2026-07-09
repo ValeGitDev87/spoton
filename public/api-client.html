@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SpotOn API Client</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f4f6f8;
+      color: #101828;
+    }
+    main {
+      width: min(1120px, calc(100% - 32px));
+      margin: 32px auto;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 16px;
+    }
+    section {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 16px;
+    }
+    h1, h2 { margin: 0 0 12px; }
+    h1 { font-size: 24px; }
+    h2 { font-size: 16px; }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 650;
+      color: #344054;
+    }
+    input {
+      width: 100%;
+      margin-top: 4px;
+      border: 1px solid #d0d5dd;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+    }
+    button {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      background: #111827;
+      color: #fff;
+    }
+    button.secondary { background: #e5e7eb; color: #111827; }
+    .row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .token {
+      padding: 10px;
+      border-radius: 8px;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      font-size: 12px;
+      overflow-wrap: anywhere;
+      min-height: 42px;
+    }
+    pre {
+      min-height: 520px;
+      max-height: 720px;
+      overflow: auto;
+      margin: 0;
+      padding: 16px;
+      background: #0b1020;
+      color: #d1e7ff;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+    }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .hint { color: #667085; font-size: 12px; line-height: 1.4; margin-top: 8px; }
+    @media (max-width: 840px) {
+      main { grid-template-columns: 1fr; }
+      pre { min-height: 360px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div>
+      <section>
+        <h1>SpotOn API Client</h1>
+        <label for="baseUrl">Base URL</label>
+        <input id="baseUrl" value="http://127.0.0.1:8000">
+        <p class="hint">Quando andiamo sul server basta cambiare questa URL in https://spotonapp.cloud.</p>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Auth</h2>
+        <label for="displayName">Nome</label>
+        <input id="displayName" value="Test User">
+        <label for="email">Email</label>
+        <input id="email" value="test@example.com">
+        <label for="password">Password</label>
+        <input id="password" type="password" value="password123">
+        <div class="row">
+          <button onclick="register()">Register</button>
+          <button onclick="login()">Login</button>
+          <button class="secondary" onclick="logout()">Logout</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Token</h2>
+        <div id="tokenBox" class="token"></div>
+        <div class="row">
+          <button class="secondary" onclick="clearToken()">Svuota token</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Luoghi / Mappa</h2>
+        <div class="grid2">
+          <div>
+            <label for="lat">Lat</label>
+            <input id="lat" value="40.8518">
+          </div>
+          <div>
+            <label for="lng">Lng</label>
+            <input id="lng" value="14.2681">
+          </div>
+        </div>
+        <label for="radiusKm">Raggio km</label>
+        <input id="radiusKm" value="200">
+        <div class="row">
+          <button onclick="me()">Me</button>
+          <button onclick="locations()">Locations</button>
+          <button onclick="nearby()">Nearby</button>
+        </div>
+      </section>
+    </div>
+
+    <section>
+      <h2>Risposta API</h2>
+      <pre id="output">Pronto. Fai login oppure register, poi prova le API protette.</pre>
+    </section>
+  </main>
+
+  <script>
+    const tokenKey = "spoton_api_token";
+    const tokenBox = document.getElementById("tokenBox");
+    const output = document.getElementById("output");
+
+    function token() {
+      return localStorage.getItem(tokenKey) || "";
+    }
+
+    function setToken(value) {
+      if (value) localStorage.setItem(tokenKey, value);
+      renderToken();
+    }
+
+    function clearToken() {
+      localStorage.removeItem(tokenKey);
+      renderToken();
+      write("Token rimosso.");
+    }
+
+    function renderToken() {
+      tokenBox.textContent = token() || "Nessun token salvato.";
+    }
+
+    function baseUrl() {
+      return document.getElementById("baseUrl").value.replace(/\/$/, "");
+    }
+
+    function write(data) {
+      output.textContent = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+    }
+
+    async function request(path, options = {}) {
+      const headers = {
+        "Accept": "application/json",
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(token() ? { "Authorization": `Bearer ${token()}` } : {}),
+      };
+
+      const response = await fetch(`${baseUrl()}${path}`, {
+        ...options,
+        headers: { ...headers, ...(options.headers || {}) },
+      });
+
+      const text = await response.text();
+      let payload;
+      try {
+        payload = text ? JSON.parse(text) : {};
+      } catch (error) {
+        payload = text;
+      }
+
+      write({ status: response.status, ok: response.ok, body: payload });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      return payload;
+    }
+
+    async function register() {
+      const payload = await request("/api/auth/register", {
+        method: "POST",
+        body: JSON.stringify({
+          display_name: document.getElementById("displayName").value,
+          email: document.getElementById("email").value,
+          password: document.getElementById("password").value,
+          password_confirmation: document.getElementById("password").value,
+        }),
+      });
+      setToken(payload.data?.token);
+    }
+
+    async function login() {
+      const payload = await request("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({
+          email: document.getElementById("email").value,
+          password: document.getElementById("password").value,
+        }),
+      });
+      setToken(payload.data?.token);
+    }
+
+    async function logout() {
+      await request("/api/auth/logout", { method: "POST" });
+      clearToken();
+    }
+
+    async function me() {
+      await request("/api/me");
+    }
+
+    async function locations() {
+      await request("/api/locations");
+    }
+
+    async function nearby() {
+      const lat = encodeURIComponent(document.getElementById("lat").value);
+      const lng = encodeURIComponent(document.getElementById("lng").value);
+      const radius = encodeURIComponent(document.getElementById("radiusKm").value);
+      await request(`/api/locations/nearby?lat=${lat}&lng=${lng}&radius_km=${radius}`);
+    }
+
+    window.addEventListener("unhandledrejection", (event) => {
+      console.error(event.reason);
+    });
+
+    renderToken();
+  </script>
+</body>
+</html>

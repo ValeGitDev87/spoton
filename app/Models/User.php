@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Models;
+
+// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
+use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+
+#[Hidden(['password', 'remember_token'])]
+class User extends Authenticatable
+{
+    /** @use HasFactory<UserFactory> */
+    use HasApiTokens, HasFactory, HasUuids, Notifiable;
+
+    protected $fillable = [
+        'email',
+        'password',
+        'display_name',
+        'avatar_color',
+        'last_known_latitude',
+        'last_known_longitude',
+        'last_location_update',
+    ];
+
+    protected $keyType = 'string';
+
+    public $incrementing = false;
+
+    /**
+     * Get the attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'email_verified_at' => 'datetime',
+            'last_location_update' => 'datetime',
+            'password' => 'hashed',
+        ];
+    }
+}
