@@ -160,6 +160,7 @@
           <button onclick="updatePost()">Modifica</button>
           <button class="secondary" onclick="deletePost()">Rimuovi</button>
           <button onclick="nearbyPosts()">Nearby posts</button>
+          <button onclick="stories()">Stories</button>
         </div>
       </section>
 
@@ -384,6 +385,13 @@
       const lng = encodeURIComponent(document.getElementById("lng").value);
       const radius = encodeURIComponent(document.getElementById("radiusKm").value);
       await request(`/api/posts/nearby?lat=${lat}&lng=${lng}&radius_km=${radius}`);
+    }
+
+    async function stories() {
+      const locationId = document.getElementById("postLocationId").value.trim();
+      if (!locationId) return write("Inserisci Location UUID.");
+
+      await request(`/api/locations/${encodeURIComponent(locationId)}/stories`);
     }
 
     function locationPayload() {

@@ -186,6 +186,41 @@ Verifiche locali:
 
 ---
 
+## Step 6 - Storie 24h / Scadenza Annunci
+
+Stato: completato localmente.
+
+Incluso:
+
+- endpoint storie per location;
+- filtro storie su post `active`, creati nelle ultime 24 ore e non scaduti;
+- ordinamento storie dal piu' vecchio al piu' recente;
+- `ExpirePostsJob` per portare a `expired` i post attivi scaduti;
+- scheduler Laravel ogni minuto;
+- client test aggiornato con bottone Stories.
+
+API:
+
+- `GET /api/locations/{location}/stories`
+
+Scheduler:
+
+- `Schedule::job(new ExpirePostsJob)->everyMinute()->withoutOverlapping()`
+
+Nota server:
+
+- serve cron ogni minuto con `php artisan schedule:run`;
+- con `QUEUE_CONNECTION=redis` serve anche un queue worker attivo per eseguire i job schedulati.
+
+Verifiche locali:
+
+- `php artisan test` OK: 25 test, 87 assertion;
+- storie protette da auth;
+- storie scadute/vecchie escluse;
+- job scadenza verificato da test automatico.
+
+---
+
 ## Step Finale Previsto - Fake Seeder Completo
 
 Da fare quando le API principali saranno pronte.
@@ -202,8 +237,8 @@ Obiettivo:
 
 ## Prossimo Step
 
-Step 6 consigliato:
+Step 7 consigliato:
 
-- storie 24h;
-- job scadenza annunci;
-- endpoint `GET /api/locations/{location}/stories`.
+- like;
+- Io c'ero;
+- lista utenti Io c'ero visibile solo al proprietario.
