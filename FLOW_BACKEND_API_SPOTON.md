@@ -83,7 +83,7 @@ Nota PostgreSQL/PostGIS:
 
 ---
 
-## Step 3 - Frontend Admin Luoghi
+## Step 3 - Portale Admin
 
 Stato: completato localmente.
 
@@ -91,7 +91,15 @@ Incluso:
 
 - login web con sessione Laravel;
 - route `/login` e `/logout`;
-- area `/admin/locations` protetta da login e flag `users.is_admin`;
+- area `/admin` protetta da login e flag `users.is_admin`;
+- dashboard con conteggi utenti, luoghi e post;
+- tabella utenti consultabile da admin;
+- tabella post consultabile da admin;
+- gestione stato post da admin:
+  - `active`;
+  - `removed`;
+  - `flagged`;
+  - `expired`;
 - lista luoghi con ricerca;
 - form creazione luogo;
 - form modifica luogo;
@@ -107,6 +115,10 @@ Route web:
 - `GET /login`
 - `POST /login`
 - `POST /logout`
+- `GET /admin`
+- `GET /admin/users`
+- `GET /admin/posts`
+- `PATCH /admin/posts/{post}/status`
 - `GET /admin/locations`
 - `GET /admin/locations/create`
 - `POST /admin/locations`
@@ -124,7 +136,7 @@ password123
 Verifiche locali:
 
 - `php artisan migrate:fresh --seed` OK;
-- `php artisan test` OK: 22 test, 78 assertion.
+- `php artisan test` OK: 30 test, 105 assertion.
 
 ---
 

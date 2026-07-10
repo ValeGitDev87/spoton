@@ -81,6 +81,16 @@
         .field { margin-bottom: 14px; }
         .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
         .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+        .stat-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .stat-card span { display: block; color: #667085; font-size: 13px; font-weight: 750; }
+        .stat-card strong { display: block; margin-top: 8px; font-size: 30px; line-height: 1; }
+        .stat-card small { display: block; margin-top: 8px; color: #475467; }
         .check-row { display: flex; align-items: center; gap: 8px; margin: 6px 0 16px; }
         .check-row input { width: 18px; height: 18px; }
         .btn {
@@ -122,6 +132,10 @@
             color: #027a48;
         }
         .badge.off { background: #f2f4f7; color: #667085; }
+        .badge.status-active { background: #ecfdf3; color: #027a48; }
+        .badge.status-expired { background: #fffaeb; color: #b54708; }
+        .badge.status-removed { background: #fef3f2; color: #b42318; }
+        .badge.status-flagged { background: #fdf2fa; color: #c11574; }
         .alert {
             margin-bottom: 14px;
             padding: 10px 12px;
@@ -141,7 +155,7 @@
         @media (max-width: 820px) {
             .shell { grid-template-columns: 1fr; }
             .sidebar { border-right: 0; border-bottom: 1px solid #e5e7eb; }
-            .grid, .grid3 { grid-template-columns: 1fr; }
+            .grid, .grid3, .stats-grid { grid-template-columns: 1fr; }
             .page-head { align-items: flex-start; flex-direction: column; }
         }
     </style>
@@ -162,7 +176,10 @@
 
     <div class="shell">
         <aside class="sidebar">
+            <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">Dashboard</a>
             <a class="nav-link {{ request()->routeIs('admin.locations.*') ? 'active' : '' }}" href="{{ route('admin.locations.index') }}">Luoghi</a>
+            <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">Utenti</a>
+            <a class="nav-link {{ request()->routeIs('admin.posts.*') ? 'active' : '' }}" href="{{ route('admin.posts.index') }}">Post</a>
         </aside>
         <main class="content">
             @yield('content')
