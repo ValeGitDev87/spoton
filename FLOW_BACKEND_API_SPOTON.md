@@ -233,24 +233,148 @@ Verifiche locali:
 
 ---
 
-## Step Finale Previsto - Fake Seeder Completo
+## Step 7 - Like / Io c'ero
 
-Da fare quando le API principali saranno pronte.
+Stato: completato localmente.
 
-Obiettivo:
+Incluso:
 
-- generare utenti fake;
-- generare luoghi fake/reali;
-- generare annunci fake con `musica`;
-- generare like, Io c'ero, storie e chat quando saranno implementati;
-- provare tutte le API dal client `public/api-client.html` e via curl.
+- tabella `likes`;
+- tabella `post_i_was_there`;
+- toggle like;
+- toggle Io c'ero;
+- blocco Io c'ero sul proprio post;
+- lista utenti Io c'ero visibile solo al proprietario del post o admin;
+- response post aggiornata con `liked_by_me` e `io_cero_by_me`.
+
+API:
+
+- `POST /api/posts/{post}/like`
+- `POST /api/posts/{post}/io-cero`
+- `GET /api/posts/{post}/io-cero-users`
 
 ---
 
-## Prossimo Step
+## Step 8 - Presence / Tracciamento
 
-Step 7 consigliato:
+Stato: completato localmente.
 
+Incluso:
+
+- tabella `presence_sessions`;
+- endpoint ping posizione utente;
+- aggiornamento ultima posizione su `users`;
+- apertura/aggiornamento sessioni presenza per luoghi nel raggio;
+- chiusura sessioni fuori raggio;
+- job per chiudere sessioni stale dopo 5 minuti;
+- conteggio `connected_now_count` sui luoghi.
+
+API:
+
+- `POST /api/presence/ping`
+
+Scheduler:
+
+- `CloseStalePresenceSessionsJob` ogni minuto.
+
+---
+
+## Step 9 - Chat
+
+Stato: completato localmente.
+
+Incluso:
+
+- tabella `chats`;
+- tabella `messages`;
+- apertura chat 1 a 1;
+- lista chat dell'utente;
+- lista messaggi;
+- invio messaggio;
+- protezione accesso solo ai partecipanti.
+
+API:
+
+- `GET /api/chats`
+- `POST /api/chats/open`
+- `GET /api/chats/{chat}/messages`
+- `POST /api/chats/{chat}/messages`
+
+---
+
+## Step 10 - Backup Admin
+
+Stato: completato localmente.
+
+Incluso:
+
+- pagina admin `/admin/backups`;
+- lista file backup consentiti;
+- download backup solo admin;
+- avvio backup manuale da portale;
+- configurazione env:
+  - `SPOTON_BACKUP_PATH`;
+  - `SPOTON_BACKUP_COMMAND`.
+
+Route web:
+
+- `GET /admin/backups`
+- `POST /admin/backups`
+- `GET /admin/backups/{filename}`
+
+---
+
+## Step 11 - Fake Seeder Completo
+
+Stato: completato localmente.
+
+Incluso:
+
+- seeder demo separato `DemoDataSeeder`;
+- admin e test user;
+- utenti demo;
+- locations demo;
+- post demo con musica;
 - like;
 - Io c'ero;
-- lista utenti Io c'ero visibile solo al proprietario.
+- presence sessions;
+- chat e messaggi.
+
+Comando:
+
+```bash
+php artisan db:seed --class=DemoDataSeeder
+```
+
+---
+
+## Stato Finale Locale
+
+Completato:
+
+- API base;
+- admin locations API;
+- portale admin web;
+- posts;
+- nearby/map;
+- stories e scadenza 24h;
+- like;
+- Io c'ero;
+- presence;
+- chat;
+- backup admin;
+- demo seeder;
+- client test `public/api-client.html` aggiornato.
+
+Verifiche locali finali:
+
+- `php artisan migrate:fresh --seed` OK;
+- `php artisan db:seed --class=DemoDataSeeder` OK;
+- `php artisan test` OK: 40 test, 154 assertion.
+
+Resta da fare dopo push/server:
+
+- lanciare migration sul server;
+- opzionalmente lanciare `DemoDataSeeder` in staging;
+- provare API e portale admin sul dominio;
+- quando tutto e' stabile, mettere `APP_ENV=production` e `APP_DEBUG=false`.

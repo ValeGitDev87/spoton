@@ -52,4 +52,24 @@ class User extends Authenticatable
     {
         return $this->hasMany(Post::class, 'author_id');
     }
+
+    public function likes(): HasMany
+    {
+        return $this->hasMany(Like::class);
+    }
+
+    public function iWasThere(): HasMany
+    {
+        return $this->hasMany(PostIWasThere::class);
+    }
+
+    public function presenceSessions(): HasMany
+    {
+        return $this->hasMany(PresenceSession::class);
+    }
+
+    public function sentMessages(): HasMany
+    {
+        return $this->hasMany(Message::class, 'sender_id');
+    }
 }

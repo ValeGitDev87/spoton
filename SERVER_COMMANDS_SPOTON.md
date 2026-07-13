@@ -26,13 +26,18 @@ Public root del dominio:
 ssh root@187.77.89.94
 cd /var/www/spotonapp.cloud/repo
 git pull
-composer install --no-dev --optimize-autoloader
+composer install --optimize-autoloader
+npm ci
+npm run build
 php artisan migrate --force
-php artisan config:clear
-php artisan route:clear
-php artisan cache:clear
-php artisan view:clear
+php artisan optimize:clear
 php artisan storage:link
+```
+
+Seeder demo solo in staging/test:
+
+```bash
+php artisan db:seed --class=DemoDataSeeder --force
 ```
 
 Se il file `.env` non esiste ancora:
@@ -64,7 +69,7 @@ QUEUE_CONNECTION=redis
 
 ## Cron Scheduler
 
-Serve per far scadere automaticamente gli annunci/storie.
+Serve per far scadere automaticamente gli annunci/storie e chiudere le presence stale.
 
 Aprire crontab:
 
@@ -157,8 +162,25 @@ curl "https://www.spotonapp.cloud/api/map?lat=40.8518&lng=14.2681&radius_km=200"
   -H "Authorization: Bearer $TOKEN"
 ```
 
+Presence:
+
+```bash
+curl -X POST "https://www.spotonapp.cloud/api/presence/ping" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"lat":40.8518,"lng":14.2681}'
+```
+
 Client API browser:
 
 ```text
 https://www.spotonapp.cloud/api-client.html
 ```
+
+Nel client browser ora sono disponibili anche:
+
+- like;
+- Io c'ero;
+- presence;
+- chat.

@@ -4,6 +4,7 @@ use App\Http\Controllers\Web\Admin\LocationController;
 use App\Http\Controllers\Web\Admin\DashboardController;
 use App\Http\Controllers\Web\Admin\PostController;
 use App\Http\Controllers\Web\Admin\UserController;
+use App\Http\Controllers\Web\Admin\BackupController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
@@ -30,4 +31,7 @@ Route::middleware(['auth', EnsureAdmin::class])
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::get('posts', [PostController::class, 'index'])->name('posts.index');
         Route::patch('posts/{post}/status', [PostController::class, 'updateStatus'])->name('posts.update-status');
+        Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
+        Route::post('backups', [BackupController::class, 'store'])->name('backups.store');
+        Route::get('backups/{filename}', [BackupController::class, 'download'])->name('backups.download');
     });

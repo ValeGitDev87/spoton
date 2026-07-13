@@ -2,9 +2,12 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminLocationController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\MapController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\PostEngagementController;
+use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\Api\StoryController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
@@ -15,6 +18,12 @@ Route::post('/auth/login', [AuthController::class, 'login'])->middleware('thrott
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::post('/presence/ping', [PresenceController::class, 'ping']);
+
+    Route::get('/chats', [ChatController::class, 'index']);
+    Route::post('/chats/open', [ChatController::class, 'open']);
+    Route::get('/chats/{chat}/messages', [ChatController::class, 'messages']);
+    Route::post('/chats/{chat}/messages', [ChatController::class, 'send']);
 
     Route::get('/locations', [LocationController::class, 'index']);
     Route::get('/locations/nearby', [LocationController::class, 'nearby']);
@@ -22,6 +31,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/map', MapController::class);
 
     Route::get('/posts/nearby', [PostController::class, 'nearby']);
+    Route::post('/posts/{post}/like', [PostEngagementController::class, 'toggleLike']);
+    Route::post('/posts/{post}/io-cero', [PostEngagementController::class, 'toggleIoCero']);
+    Route::get('/posts/{post}/io-cero-users', [PostEngagementController::class, 'ioCeroUsers']);
     Route::apiResource('posts', PostController::class);
 
     Route::middleware(EnsureAdmin::class)

@@ -35,13 +35,17 @@
       font-weight: 650;
       color: #344054;
     }
-    input {
+    input, textarea {
       width: 100%;
       margin-top: 4px;
       border: 1px solid #d0d5dd;
       border-radius: 8px;
       padding: 10px 12px;
       font: inherit;
+    }
+    textarea {
+      min-height: 84px;
+      resize: vertical;
     }
     button {
       border: 0;
@@ -161,6 +165,40 @@
           <button class="secondary" onclick="deletePost()">Rimuovi</button>
           <button onclick="nearbyPosts()">Nearby posts</button>
           <button onclick="stories()">Stories</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Like / Io c'ero</h2>
+        <p class="hint">Usa il Post UUID della sezione Annunci.</p>
+        <div class="row">
+          <button onclick="toggleLike()">Like toggle</button>
+          <button onclick="toggleIoCero()">Io c'ero toggle</button>
+          <button onclick="ioCeroUsers()">Lista Io c'ero</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Presence</h2>
+        <p class="hint">Usa Lat/Lng della sezione Luoghi / Mappa per simulare il tracciamento app.</p>
+        <div class="row">
+          <button onclick="presencePing()">Ping presenza</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Chat</h2>
+        <label for="chatUserId">Altro User UUID</label>
+        <input id="chatUserId" placeholder="UUID utente con cui aprire la chat">
+        <label for="chatId">Chat UUID</label>
+        <input id="chatId" placeholder="Viene compilato da Apri chat">
+        <label for="chatText">Messaggio</label>
+        <textarea id="chatText">Ciao, ti ho visto anche io in quel posto.</textarea>
+        <div class="row">
+          <button onclick="chats()">Lista chat</button>
+          <button onclick="openChat()">Apri chat</button>
+          <button onclick="chatMessages()">Messaggi</button>
+          <button onclick="sendChatMessage()">Invia</button>
         </div>
       </section>
 
@@ -392,6 +430,82 @@
       if (!locationId) return write("Inserisci Location UUID.");
 
       await request(`/api/locations/${encodeURIComponent(locationId)}/stories`);
+    }
+
+    function requirePostId() {
+      const id = document.getElementById("postId").value.trim();
+      if (!id) {
+        write("Inserisci Post UUID.");
+        return "";
+      }
+
+      return encodeURIComponent(id);
+    }
+
+    async function toggleLike() {
+      const id = requirePostId();
+      if (!id) return;
+
+      await request(`/api/posts/${id}/like`, { method: "POST" });
+    }
+
+    async function toggleIoCero() {
+      const id = requirePostId();
+      if (!id) return;
+
+      await request(`/api/posts/${id}/io-cero`, { method: "POST" });
+    }
+
+    async function ioCeroUsers() {
+      const id = requirePostId();
+      if (!id) return;
+
+      await request(`/api/posts/${id}/io-cero-users`);
+    }
+
+    async function presencePing() {
+      await request("/api/presence/ping", {
+        method: "POST",
+        body: JSON.stringify({
+          lat: Number(document.getElementById("lat").value),
+          lng: Number(document.getElementById("lng").value),
+        }),
+      });
+    }
+
+    async function chats() {
+      const payload = await request("/api/chats");
+      if (payload.data?.[0]?.id) document.getElementById("chatId").value = payload.data[0].id;
+      if (payload.data?.[0]?.participant?.id) document.getElementById("chatUserId").value = payload.data[0].participant.id;
+    }
+
+    async function openChat() {
+      const userId = document.getElementById("chatUserId").value.trim();
+      if (!userId) return write("Inserisci Altro User UUID.");
+
+      const payload = await request("/api/chats/open", {
+        method: "POST",
+        body: JSON.stringify({ user_id: userId }),
+      });
+
+      if (payload.data?.id) document.getElementById("chatId").value = payload.data.id;
+    }
+
+    async function chatMessages() {
+      const id = document.getElementById("chatId").value.trim();
+      if (!id) return write("Inserisci Chat UUID.");
+
+      await request(`/api/chats/${encodeURIComponent(id)}/messages`);
+    }
+
+    async function sendChatMessage() {
+      const id = document.getElementById("chatId").value.trim();
+      if (!id) return write("Inserisci Chat UUID.");
+
+      await request(`/api/chats/${encodeURIComponent(id)}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ text: document.getElementById("chatText").value }),
+      });
     }
 
     function locationPayload() {

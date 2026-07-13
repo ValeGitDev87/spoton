@@ -30,8 +30,12 @@ trait SerializesPosts
             'comment_count' => $post->comment_count ?? 0,
             'share_count' => $post->share_count ?? 0,
             'io_cero_count' => $post->io_cero_count ?? 0,
-            'liked_by_me' => false,
-            'io_cero_by_me' => false,
+            'liked_by_me' => $post->likes()
+                ->where('user_id', $viewer->id)
+                ->exists(),
+            'io_cero_by_me' => $post->iWasThere()
+                ->where('user_id', $viewer->id)
+                ->exists(),
             'is_owner' => $post->author_id === $viewer->id,
             'status' => $post->status,
             'is_active' => $post->isActive(),

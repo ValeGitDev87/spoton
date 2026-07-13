@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'spoton_backup' => [
+        'path' => env('SPOTON_BACKUP_PATH', '/var/backups/spotonapp'),
+        'command' => env('SPOTON_BACKUP_COMMAND', '/usr/local/sbin/spotonapp-backup.sh'),
+    ],
+
 ];

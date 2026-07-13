@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Concerns;
 
 use App\Models\Location;
+use App\Models\PresenceSession;
 
 trait SerializesLocations
 {
@@ -19,7 +20,11 @@ trait SerializesLocations
             'geo_radius_meters' => $location->geo_radius_meters,
             'icon' => $location->icon,
             'is_active' => $location->is_active,
-            'connected_now_count' => 0,
+            'connected_now_count' => PresenceSession::query()
+                ->where('location_id', $location->id)
+                ->whereNull('ended_at')
+                ->where('last_ping_at', '>', now()->subMinutes(5))
+                ->count(),
         ];
 
         if ($distanceKm !== null) {

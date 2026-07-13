@@ -41,4 +41,9 @@ class Location extends Model
     {
         return $this->hasMany(Post::class);
     }
+
+    public function presenceSessions(): HasMany
+    {
+        return $this->hasMany(PresenceSession::class);
+    }
 }
