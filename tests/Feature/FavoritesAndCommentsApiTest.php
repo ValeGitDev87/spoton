@@ -73,6 +73,62 @@ class FavoritesAndCommentsApiTest extends TestCase
         ]);
     }
 
+    public function test_comment_tag_accepts_trailing_punctuation_and_prefers_exact_name(): void
+    {
+        $author = User::factory()->create();
+        $sara = User::factory()->create(['display_name' => 'Sara']);
+        User::factory()->create(['display_name' => 'Sara Blu']);
+        $post = $this->makePost();
+
+        $this
+            ->actingAs($author, 'sanctum')
+            ->postJson('/api/favorites', ['target_name' => 'Sara'])
+            ->assertCreated();
+
+        $this
+            ->actingAs($author, 'sanctum')
+            ->postJson('/api/favorites', ['target_name' => 'Sara Blu'])
+            ->assertCreated();
+
+        $this
+            ->actingAs($author, 'sanctum')
+            ->postJson(
+                "/api/posts/{$post->id}/comments",
+                ['text' => 'Ciao @Sara, secondo me eri tu.']
+            )
+            ->assertCreated()
+            ->assertJsonPath('data.tagged_user.id', $sara->id)
+            ->assertJsonPath('data.tagged_user.display_name', 'Sara');
+    }
+
+    public function test_comment_tag_supports_favorite_names_with_spaces(): void
+    {
+        $author = User::factory()->create();
+        User::factory()->create(['display_name' => 'Sara']);
+        $saraBlu = User::factory()->create(['display_name' => 'Sara Blu']);
+        $post = $this->makePost();
+
+        $this
+            ->actingAs($author, 'sanctum')
+            ->postJson('/api/favorites', ['target_name' => 'Sara'])
+            ->assertCreated();
+
+        $this
+            ->actingAs($author, 'sanctum')
+            ->postJson('/api/favorites', ['target_name' => 'Sara Blu'])
+            ->assertCreated();
+
+        $this
+            ->actingAs($author, 'sanctum')
+            ->postJson(
+                "/api/posts/{$post->id}/comments",
+                ['text' => 'Ciao @Sara Blu!']
+            )
+            ->assertCreated()
+            ->assertJsonPath('data.tagged_user.id', $saraBlu->id)
+            ->assertJsonPath('data.tagged_user.display_name', 'Sara Blu');
+    }
+
     public function test_comments_can_be_listed(): void
     {
         $author = User::factory()->create();
