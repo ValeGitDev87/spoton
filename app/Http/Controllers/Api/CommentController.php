@@ -63,31 +63,40 @@ class CommentController extends Controller
 
     private function resolveTaggedUserId(User $author, string $text): ?string
     {
-        if (! preg_match('/@([^\s@]+)/u', $text, $matches)) {
+        if (! str_contains($text, '@')) {
             return null;
         }
 
-        $targetName = trim($matches[1]);
-        $normalizedTargetName = mb_strtolower($targetName);
-
-        $favorite = Favorite::query()
+        $favorites = Favorite::query()
             ->where('owner_id', $author->id)
-            ->where(function ($query) use ($normalizedTargetName): void {
-                $query
-                    ->whereRaw('LOWER(target_name) = ?', [$normalizedTargetName])
-                    ->orWhereRaw('LOWER(target_name) LIKE ?', [$normalizedTargetName.' %']);
-            })
-            ->first();
+            ->get()
+            ->sortByDesc(
+                fn (Favorite $favorite): int => mb_strlen(trim($favorite->target_name))
+            );
 
-        if (! $favorite) {
-            throw ValidationException::withMessages([
-                'text' => ['Puoi taggare solo persone presenti nei tuoi preferiti.'],
-            ]);
+        foreach ($favorites as $favorite) {
+            $targetName = trim($favorite->target_name);
+            $escapedTargetName = preg_quote($targetName, '/');
+
+            // Accetta punteggiatura dopo il nome e prova prima i nomi più lunghi.
+            $pattern = '/@'.$escapedTargetName.'(?![\\p{L}\\p{N}_])/iu';
+
+            if (preg_match($pattern, $text) !== 1) {
+                continue;
+            }
+
+            $taggedUserId = User::query()
+                ->whereRaw('LOWER(display_name) = ?', [mb_strtolower($targetName)])
+                ->value('id');
+
+            if ($taggedUserId) {
+                return $taggedUserId;
+            }
         }
 
-        return User::query()
-            ->whereRaw('LOWER(display_name) = ?', [mb_strtolower($favorite->target_name)])
-            ->value('id');
+        throw ValidationException::withMessages([
+            'text' => ['Puoi taggare solo persone presenti nei tuoi preferiti.'],
+        ]);
     }
 
     private function commentPayload(Comment $comment): array
