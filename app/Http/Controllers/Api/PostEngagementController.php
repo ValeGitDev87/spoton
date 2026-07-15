@@ -64,7 +64,11 @@ class PostEngagementController extends Controller
 
             if ($record) {
                 $record->delete();
-                $lockedPost->update(['io_cero_count' => max(0, $lockedPost->iWasThere()->count())]);
+                $count = max(0, $lockedPost->iWasThere()->count());
+                $lockedPost->update([
+                    'io_cero_count' => $count,
+                    'spot_on_count' => $count,
+                ]);
 
                 return false;
             }
@@ -74,7 +78,11 @@ class PostEngagementController extends Controller
                 'user_id' => $request->user()->id,
             ]);
 
-            $lockedPost->update(['io_cero_count' => $lockedPost->iWasThere()->count()]);
+            $count = $lockedPost->iWasThere()->count();
+            $lockedPost->update([
+                'io_cero_count' => $count,
+                'spot_on_count' => $count,
+            ]);
 
             return true;
         });
@@ -86,6 +94,7 @@ class PostEngagementController extends Controller
             'data' => [
                 'io_cero' => $ioCero,
                 'io_cero_count' => $post->io_cero_count,
+                'spot_on_count' => $post->spot_on_count,
             ],
         ]);
     }

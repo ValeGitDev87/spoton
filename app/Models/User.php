@@ -23,6 +23,11 @@ class User extends Authenticatable
         'password',
         'display_name',
         'avatar_color',
+        'avatar_url',
+        'bio',
+        'photos',
+        'karma',
+        'auth_provider',
         'is_admin',
         'last_known_latitude',
         'last_known_longitude',
@@ -43,6 +48,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'is_admin' => 'boolean',
+            'photos' => 'array',
+            'karma' => 'integer',
             'last_location_update' => 'datetime',
             'password' => 'hashed',
         ];
@@ -71,5 +78,15 @@ class User extends Authenticatable
     public function sentMessages(): HasMany
     {
         return $this->hasMany(Message::class, 'sender_id');
+    }
+
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(Favorite::class, 'owner_id');
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class, 'author_id');
     }
 }

@@ -16,7 +16,11 @@ class UpdatePostRequest extends FormRequest
         return [
             'text' => ['sometimes', 'string', 'min:3', 'max:2000'],
             'musica' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'song_quote' => ['sometimes', 'nullable', 'string', 'max:255'],
             'sighting_date' => ['sometimes', 'date', 'before_or_equal:today'],
+            'is_anonymous' => ['sometimes', 'boolean'],
+            'secret_question' => ['sometimes', 'nullable', 'string', 'max:500', 'required_with:secret_answer'],
+            'secret_answer' => ['sometimes', 'nullable', 'string', 'max:255', 'required_with:secret_question'],
         ];
     }
 }

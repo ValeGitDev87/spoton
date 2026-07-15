@@ -378,3 +378,54 @@ Resta da fare dopo push/server:
 - opzionalmente lanciare `DemoDataSeeder` in staging;
 - provare API e portale admin sul dominio;
 - quando tutto e' stabile, mettere `APP_ENV=production` e `APP_DEBUG=false`.
+
+---
+
+## Nuova Specifica - Blocco 1/2, Step 1-4
+
+Stato: completato localmente.
+
+Documento di riferimento:
+
+```text
+/Users/valentinoscianre/Desktop/SpotOn/Beccato_SpotOn - Specifica Backend (ultima versione).md
+```
+
+Incluso:
+
+- profilo utente esteso:
+  - `auth_provider`;
+  - `avatar_url`;
+  - `bio`;
+  - `photos`;
+  - `karma`;
+- post Ghost:
+  - `song_quote`;
+  - `is_anonymous`;
+  - `secret_question`;
+  - `secret_answer_hash`;
+  - risposta segreta mai esposta nelle API;
+  - autore mascherato come `Ghost` per non-owner/non-admin;
+- preferiti privati:
+  - `GET /api/favorites?query=`;
+  - `POST /api/favorites`;
+  - `DELETE /api/favorites/{targetName}`;
+- commenti:
+  - `GET /api/posts/{post}/comments`;
+  - `POST /api/posts/{post}/comments`;
+  - tag `@Nome` consentito solo se quel nome e' nei preferiti dell'utente;
+- seeder demo aggiornato con preferiti, commenti e post Ghost;
+- client `public/api-client.html` aggiornato.
+
+Doc test dedicato:
+
+```text
+HANDOFF_CHATGPT_STEP_1_4_NUOVA_SPECIFICA.md
+```
+
+Prossimo blocco:
+
+- challenge classica;
+- challenge invertita;
+- controproposta;
+- API foto/karma e rifiniture finali.

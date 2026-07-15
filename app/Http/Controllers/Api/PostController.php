@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 
 class PostController extends Controller
 {
@@ -32,6 +33,7 @@ class PostController extends Controller
                     $inner
                         ->where('text', 'like', "%{$search}%")
                         ->orWhere('musica', 'like', "%{$search}%")
+                        ->orWhere('song_quote', 'like', "%{$search}%")
                         ->orWhereHas('location', fn (Builder $location) => $location
                             ->where('name', 'like', "%{$search}%")
                             ->orWhere('city', 'like', "%{$search}%"))
@@ -80,7 +82,7 @@ class PostController extends Controller
     public function store(StorePostRequest $request): JsonResponse
     {
         $post = Post::query()->create([
-            ...$request->validated(),
+            ...$this->preparePostData($request->validated()),
             'author_id' => $request->user()->id,
             'expires_at' => now()->addHours(24),
             'status' => 'active',
@@ -106,7 +108,7 @@ class PostController extends Controller
     {
         abort_unless($post->author_id === $request->user()->id || $request->user()->is_admin, 403);
 
-        $post->update($request->validated());
+        $post->update($this->preparePostData($request->validated()));
 
         return response()->json([
             'message' => 'OK',
@@ -139,7 +141,8 @@ class PostController extends Controller
                 $query->where(function (Builder $inner) use ($search): void {
                     $inner
                         ->where('text', 'like', "%{$search}%")
-                        ->orWhere('musica', 'like', "%{$search}%");
+                        ->orWhere('musica', 'like', "%{$search}%")
+                        ->orWhere('song_quote', 'like', "%{$search}%");
                 });
             })
             ->get()
@@ -160,5 +163,29 @@ class PostController extends Controller
             ])
             ->values()
             ->all();
+    }
+
+    private function preparePostData(array $data): array
+    {
+        if (array_key_exists('song_quote', $data) && ! array_key_exists('musica', $data)) {
+            $data['musica'] = $data['song_quote'];
+        }
+
+        if (array_key_exists('musica', $data) && ! array_key_exists('song_quote', $data)) {
+            $data['song_quote'] = $data['musica'];
+        }
+
+        if (array_key_exists('secret_answer', $data)) {
+            $answer = trim((string) $data['secret_answer']);
+            $data['secret_answer_hash'] = $answer === '' ? null : Hash::make($this->normalizeSecretAnswer($answer));
+            unset($data['secret_answer']);
+        }
+
+        return $data;
+    }
+
+    private function normalizeSecretAnswer(string $answer): string
+    {
+        return mb_strtolower(trim($answer));
     }
 }

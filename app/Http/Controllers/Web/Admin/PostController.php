@@ -19,6 +19,7 @@ class PostController extends Controller
                     $inner
                         ->where('text', 'like', "%{$search}%")
                         ->orWhere('musica', 'like', "%{$search}%")
+                        ->orWhere('song_quote', 'like', "%{$search}%")
                         ->orWhereHas('author', fn ($author) => $author->where('display_name', 'like', "%{$search}%"))
                         ->orWhereHas('location', fn ($location) => $location->where('name', 'like', "%{$search}%"));
                 });

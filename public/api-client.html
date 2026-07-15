@@ -47,6 +47,10 @@
       min-height: 84px;
       resize: vertical;
     }
+    input[type="checkbox"] {
+      width: auto;
+      margin-right: 6px;
+    }
     button {
       border: 0;
       border-radius: 8px;
@@ -155,6 +159,14 @@
         <input id="postText" value="Ti ho vista vicino al mare, avevi un sorriso impossibile da dimenticare.">
         <label for="postMusica">Musica / ritornello</label>
         <input id="postMusica" value="Quel ritornello che faceva la la la">
+        <label for="postSecretQuestion">Domanda Ghost</label>
+        <input id="postSecretQuestion" placeholder="Es. Che colore era il libro?">
+        <label for="postSecretAnswer">Risposta Ghost</label>
+        <input id="postSecretAnswer" placeholder="Viene inviata e salvata solo hashata">
+        <label>
+          <input id="postIsAnonymous" type="checkbox">
+          Modalita Ghost
+        </label>
         <label for="postDate">Data avvistamento</label>
         <input id="postDate" type="date">
         <div class="row">
@@ -165,6 +177,25 @@
           <button class="secondary" onclick="deletePost()">Rimuovi</button>
           <button onclick="nearbyPosts()">Nearby posts</button>
           <button onclick="stories()">Stories</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Preferiti / Commenti</h2>
+        <label for="favoriteName">Nome preferito</label>
+        <input id="favoriteName" value="Sara">
+        <label for="favoriteQuery">Cerca preferito</label>
+        <input id="favoriteQuery" value="sa">
+        <label for="commentText">Commento</label>
+        <textarea id="commentText">Ciao @Sara, secondo me eri tu.</textarea>
+        <p class="hint">Per taggare con @ devi prima aggiungere quel nome ai tuoi preferiti.</p>
+        <div class="row">
+          <button onclick="favorites()">Lista preferiti</button>
+          <button onclick="searchFavorites()">Cerca tag</button>
+          <button onclick="addFavorite()">Aggiungi</button>
+          <button class="secondary" onclick="removeFavorite()">Rimuovi</button>
+          <button onclick="comments()">Lista commenti</button>
+          <button onclick="createComment()">Commenta</button>
         </div>
       </section>
 
@@ -368,12 +399,24 @@
     }
 
     function postPayload() {
-      return {
+      const payload = {
         location_id: document.getElementById("postLocationId").value,
         text: document.getElementById("postText").value,
         musica: document.getElementById("postMusica").value || null,
+        song_quote: document.getElementById("postMusica").value || null,
         sighting_date: document.getElementById("postDate").value,
+        is_anonymous: document.getElementById("postIsAnonymous").checked,
       };
+
+      const secretQuestion = document.getElementById("postSecretQuestion").value.trim();
+      const secretAnswer = document.getElementById("postSecretAnswer").value.trim();
+
+      if (secretQuestion || secretAnswer) {
+        payload.secret_question = secretQuestion;
+        payload.secret_answer = secretAnswer;
+      }
+
+      return payload;
     }
 
     async function posts() {
@@ -430,6 +473,46 @@
       if (!locationId) return write("Inserisci Location UUID.");
 
       await request(`/api/locations/${encodeURIComponent(locationId)}/stories`);
+    }
+
+    async function favorites() {
+      await request("/api/favorites");
+    }
+
+    async function searchFavorites() {
+      const query = encodeURIComponent(document.getElementById("favoriteQuery").value);
+      await request(`/api/favorites?query=${query}`);
+    }
+
+    async function addFavorite() {
+      await request("/api/favorites", {
+        method: "POST",
+        body: JSON.stringify({ target_name: document.getElementById("favoriteName").value }),
+      });
+    }
+
+    async function removeFavorite() {
+      const targetName = document.getElementById("favoriteName").value.trim();
+      if (!targetName) return write("Inserisci Nome preferito.");
+
+      await request(`/api/favorites/${encodeURIComponent(targetName)}`, { method: "DELETE" });
+    }
+
+    async function comments() {
+      const id = requirePostId();
+      if (!id) return;
+
+      await request(`/api/posts/${id}/comments`);
+    }
+
+    async function createComment() {
+      const id = requirePostId();
+      if (!id) return;
+
+      await request(`/api/posts/${id}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ text: document.getElementById("commentText").value }),
+      });
     }
 
     function requirePostId() {

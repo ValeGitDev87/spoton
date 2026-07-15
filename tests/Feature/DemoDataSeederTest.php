@@ -23,5 +23,8 @@ class DemoDataSeederTest extends TestCase
         $this->assertDatabaseHas('post_i_was_there', []);
         $this->assertDatabaseHas('presence_sessions', []);
         $this->assertDatabaseHas('messages', []);
+        $this->assertDatabaseHas('favorites', []);
+        $this->assertDatabaseHas('comments', []);
+        $this->assertDatabaseHas('posts', ['is_anonymous' => true]);
     }
 }

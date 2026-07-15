@@ -3,6 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\Chat;
+use App\Models\Comment;
+use App\Models\Favorite;
 use App\Models\Like;
 use App\Models\Location;
 use App\Models\Message;
@@ -19,23 +21,29 @@ class DemoDataSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function (): void {
-            $admin = User::query()->firstOrCreate(
+            $admin = User::query()->updateOrCreate(
                 ['email' => 'admin@spoton.local'],
                 [
                     'display_name' => 'Admin SpotOn',
                     'password' => Hash::make('password123'),
                     'is_admin' => true,
                     'avatar_color' => '#111827',
+                    'auth_provider' => 'email',
+                    'karma' => 0,
                 ],
             );
 
-            $testUser = User::query()->firstOrCreate(
+            $testUser = User::query()->updateOrCreate(
                 ['email' => 'test@example.com'],
                 [
                     'display_name' => 'Test User',
                     'password' => Hash::make('password123'),
                     'is_admin' => false,
                     'avatar_color' => '#0ea5e9',
+                    'auth_provider' => 'email',
+                    'bio' => 'Account test per provare SpotOn.',
+                    'photos' => ['https://example.test/photos/test-user-1.jpg'],
+                    'karma' => 2,
                 ],
             );
 
@@ -48,15 +56,33 @@ class DemoDataSeeder extends Seeder
                 ['Davide Mare', 'davide.demo@spoton.local', '#3b82f6'],
                 ['Elena Sole', 'elena.demo@spoton.local', '#f59e0b'],
             ] as [$name, $email, $color]) {
-                $users->push(User::query()->firstOrCreate(
+                $users->push(User::query()->updateOrCreate(
                     ['email' => $email],
                     [
                         'display_name' => $name,
                         'password' => Hash::make('password123'),
                         'is_admin' => false,
                         'avatar_color' => $color,
+                        'auth_provider' => 'email',
+                        'bio' => 'Profilo demo SpotOn.',
+                        'karma' => random_int(0, 8),
                     ],
                 ));
+            }
+
+            foreach ($users->where('is_admin', false) as $user) {
+                $targets = $users
+                    ->where('is_admin', false)
+                    ->reject(fn (User $target) => $target->id === $user->id)
+                    ->pluck('display_name')
+                    ->take(3);
+
+                foreach ($targets as $targetName) {
+                    Favorite::query()->firstOrCreate([
+                        'owner_id' => $user->id,
+                        'target_name' => $targetName,
+                    ]);
+                }
             }
 
             $locations = collect([
@@ -108,7 +134,11 @@ class DemoDataSeeder extends Seeder
                     'location_id' => $location->id,
                     'text' => $texts[$i % count($texts)],
                     'musica' => $musiche[$i % count($musiche)],
+                    'song_quote' => $musiche[$i % count($musiche)],
                     'sighting_date' => now()->subDays(random_int(0, 2))->toDateString(),
+                    'is_anonymous' => $i % 4 === 0,
+                    'secret_question' => $i % 4 === 0 ? 'Che dettaglio ricordi di me?' : null,
+                    'secret_answer_hash' => $i % 4 === 0 ? Hash::make('sorriso') : null,
                     'expires_at' => $i < 14 ? now()->addHours(random_int(1, 24)) : now()->subHours(random_int(1, 5)),
                     'status' => $i < 14 ? 'active' : 'expired',
                 ]));
@@ -138,7 +168,33 @@ class DemoDataSeeder extends Seeder
                 $post->update([
                     'like_count' => $post->likes()->count(),
                     'io_cero_count' => $post->iWasThere()->count(),
+                    'spot_on_count' => $post->iWasThere()->count(),
                 ]);
+            }
+
+            foreach ($posts->take(10) as $post) {
+                $commentAuthor = $users
+                    ->where('is_admin', false)
+                    ->reject(fn (User $user) => $user->id === $post->author_id)
+                    ->first();
+                $taggedUser = $users
+                    ->where('is_admin', false)
+                    ->reject(fn (User $user) => $user->id === $commentAuthor->id)
+                    ->first();
+
+                Favorite::query()->firstOrCreate([
+                    'owner_id' => $commentAuthor->id,
+                    'target_name' => $taggedUser->display_name,
+                ]);
+
+                Comment::query()->create([
+                    'post_id' => $post->id,
+                    'author_id' => $commentAuthor->id,
+                    'tagged_user_id' => $taggedUser->id,
+                    'text' => 'Secondo me era proprio @'.strtok($taggedUser->display_name, ' '),
+                ]);
+
+                $post->update(['comment_count' => $post->comments()->count()]);
             }
 
             foreach ($users->where('is_admin', false)->take(4) as $user) {

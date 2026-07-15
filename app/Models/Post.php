@@ -17,12 +17,17 @@ class Post extends Model
         'location_id',
         'text',
         'musica',
+        'song_quote',
         'sighting_date',
+        'is_anonymous',
+        'secret_question',
+        'secret_answer_hash',
         'expires_at',
         'like_count',
         'comment_count',
         'share_count',
         'io_cero_count',
+        'spot_on_count',
         'status',
     ];
 
@@ -34,11 +39,13 @@ class Post extends Model
     {
         return [
             'sighting_date' => 'date',
+            'is_anonymous' => 'boolean',
             'expires_at' => 'datetime',
             'like_count' => 'integer',
             'comment_count' => 'integer',
             'share_count' => 'integer',
             'io_cero_count' => 'integer',
+            'spot_on_count' => 'integer',
         ];
     }
 
@@ -60,6 +67,11 @@ class Post extends Model
     public function iWasThere(): HasMany
     {
         return $this->hasMany(PostIWasThere::class);
+    }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class);
     }
 
     public function isActive(): bool

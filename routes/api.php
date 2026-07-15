@@ -3,6 +3,8 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminLocationController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\MapController;
 use App\Http\Controllers\Api\PostController;
@@ -20,6 +22,10 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/presence/ping', [PresenceController::class, 'ping']);
 
+    Route::get('/favorites', [FavoriteController::class, 'index']);
+    Route::post('/favorites', [FavoriteController::class, 'store']);
+    Route::delete('/favorites/{targetName}', [FavoriteController::class, 'destroy']);
+
     Route::get('/chats', [ChatController::class, 'index']);
     Route::post('/chats/open', [ChatController::class, 'open']);
     Route::get('/chats/{chat}/messages', [ChatController::class, 'messages']);
@@ -34,6 +40,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::post('/posts/{post}/like', [PostEngagementController::class, 'toggleLike']);
     Route::post('/posts/{post}/io-cero', [PostEngagementController::class, 'toggleIoCero']);
     Route::get('/posts/{post}/io-cero-users', [PostEngagementController::class, 'ioCeroUsers']);
+    Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
+    Route::post('/posts/{post}/comments', [CommentController::class, 'store']);
     Route::apiResource('posts', PostController::class);
 
     Route::middleware(EnsureAdmin::class)
