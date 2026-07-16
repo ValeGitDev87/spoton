@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\Challenge;
-use App\Models\Chat;
 use App\Models\Comment;
 use App\Models\Location;
 use App\Models\Post;
@@ -131,6 +130,8 @@ class ChallengeApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.origin', 'classic')
             ->assertJsonPath('data.status', 'counter_pending')
+            ->assertJsonPath('data.challenger.id', $viewer->id)
+            ->assertJsonPath('data.target_user.id', $owner->id)
             ->json('data.id');
 
         $this
@@ -188,9 +189,9 @@ class ChallengeApiTest extends TestCase
         $counterChallengeId = Challenge::query()->create([
             'post_id' => $post->id,
             'origin' => 'classic',
-            'challenger_id' => $owner->id,
+            'challenger_id' => $target->id,
             'target_type' => 'post_author',
-            'target_user_id' => $target->id,
+            'target_user_id' => $owner->id,
             'question' => 'Domanda',
             'answer_hash' => Hash::make('risposta'),
             'status' => 'counter_pending',

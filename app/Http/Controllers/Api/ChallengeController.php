@@ -27,8 +27,16 @@ class ChallengeController extends Controller
                         ->where('target_user_id', $request->user()->id)
                         ->whereIn('status', [Challenge::STATUS_PENDING, Challenge::STATUS_REJECTED]))
                     ->orWhere(fn (Builder $inner) => $inner
-                        ->where('challenger_id', $request->user()->id)
-                        ->where('status', Challenge::STATUS_COUNTER_PENDING));
+                        ->where('status', Challenge::STATUS_COUNTER_PENDING)
+                        ->where(function (Builder $reviewer) use ($request): void {
+                            $reviewer
+                                ->where(fn (Builder $classic) => $classic
+                                    ->where('origin', Challenge::ORIGIN_CLASSIC)
+                                    ->where('target_user_id', $request->user()->id))
+                                ->orWhere(fn (Builder $inverted) => $inverted
+                                    ->where('origin', Challenge::ORIGIN_INVERTED)
+                                    ->where('challenger_id', $request->user()->id));
+                        }));
             })
             ->latest()
             ->paginate((int) $request->query('per_page', 25));
@@ -231,9 +239,9 @@ class ChallengeController extends Controller
         $challenge = Challenge::query()->create([
             'post_id' => $post->id,
             'origin' => Challenge::ORIGIN_CLASSIC,
-            'challenger_id' => $post->author_id,
+            'challenger_id' => $request->user()->id,
             'target_type' => Challenge::TARGET_POST_AUTHOR,
-            'target_user_id' => $request->user()->id,
+            'target_user_id' => $post->author_id,
             'question' => $post->secret_question,
             'answer_hash' => $post->secret_answer_hash,
             'status' => Challenge::STATUS_COUNTER_PENDING,
