@@ -35,7 +35,7 @@
       font-weight: 650;
       color: #344054;
     }
-    input, textarea {
+    input, textarea, select {
       width: 100%;
       margin-top: 4px;
       border: 1px solid #d0d5dd;
@@ -230,6 +230,59 @@
           <button onclick="openChat()">Apri chat</button>
           <button onclick="chatMessages()">Messaggi</button>
           <button onclick="sendChatMessage()">Invia</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Challenge / Karma</h2>
+        <label for="challengeId">Challenge UUID</label>
+        <input id="challengeId" placeholder="Viene compilato quando crei una challenge">
+        <div class="grid2">
+          <div>
+            <label for="challengeTargetType">Target</label>
+            <select id="challengeTargetType">
+              <option value="post_author">Autore post</option>
+              <option value="comment_author">Autore commento</option>
+            </select>
+          </div>
+          <div>
+            <label for="challengeMode">Modalita</label>
+            <select id="challengeMode">
+              <option value="question">Domanda</option>
+              <option value="direct">Contatto diretto</option>
+            </select>
+          </div>
+        </div>
+        <label for="sourceCommentId">Comment UUID</label>
+        <input id="sourceCommentId" placeholder="Solo per target autore commento">
+        <label for="challengeQuestion">Domanda challenge</label>
+        <input id="challengeQuestion" value="Che dettaglio ricordi?">
+        <label for="challengeAnswer">Risposta</label>
+        <input id="challengeAnswer" value="sorriso">
+        <label for="counterText">Controproposta</label>
+        <textarea id="counterText">Non ricordo la parola esatta, ma ricordo un dettaglio preciso.</textarea>
+        <div class="row">
+          <button onclick="verifyClassic()">Verifica classica</button>
+          <button onclick="createChallenge()">Crea challenge</button>
+          <button onclick="pendingChallenges()">Pending</button>
+          <button onclick="answerChallenge()">Rispondi</button>
+          <button onclick="counterProposeClassic()">Counter post</button>
+          <button onclick="counterProposeChallenge()">Counter challenge</button>
+          <button onclick="counterReview(true)">Accetta</button>
+          <button class="secondary" onclick="counterReview(false)">Rifiuta</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Profilo</h2>
+        <label for="photoUrl">Photo URL</label>
+        <input id="photoUrl" value="https://example.test/photos/manual.jpg">
+        <label for="photoId">Photo ID</label>
+        <input id="photoId" value="0">
+        <div class="row">
+          <button onclick="karma()">Karma</button>
+          <button onclick="addPhoto()">Aggiungi foto URL</button>
+          <button class="secondary" onclick="deletePhoto()">Elimina foto</button>
         </div>
       </section>
 
@@ -589,6 +642,112 @@
         method: "POST",
         body: JSON.stringify({ text: document.getElementById("chatText").value }),
       });
+    }
+
+    async function verifyClassic() {
+      const id = requirePostId();
+      if (!id) return;
+
+      await request(`/api/posts/${id}/verify-answer`, {
+        method: "POST",
+        body: JSON.stringify({ answer: document.getElementById("challengeAnswer").value }),
+      });
+    }
+
+    async function createChallenge() {
+      const postId = document.getElementById("postId").value.trim();
+      if (!postId) return write("Inserisci Post UUID.");
+
+      const payload = {
+        post_id: postId,
+        target_type: document.getElementById("challengeTargetType").value,
+        mode: document.getElementById("challengeMode").value,
+      };
+
+      const sourceCommentId = document.getElementById("sourceCommentId").value.trim();
+      if (sourceCommentId) payload.source_comment_id = sourceCommentId;
+
+      if (payload.mode === "question") {
+        payload.question = document.getElementById("challengeQuestion").value;
+        payload.answer = document.getElementById("challengeAnswer").value;
+      }
+
+      const response = await request("/api/challenges", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      if (response.data?.id) document.getElementById("challengeId").value = response.data.id;
+      if (response.data?.chat_id) document.getElementById("chatId").value = response.data.chat_id;
+    }
+
+    async function pendingChallenges() {
+      const response = await request("/api/challenges/pending");
+      if (response.data?.[0]?.id) document.getElementById("challengeId").value = response.data[0].id;
+    }
+
+    async function answerChallenge() {
+      const id = document.getElementById("challengeId").value.trim();
+      if (!id) return write("Inserisci Challenge UUID.");
+
+      const response = await request(`/api/challenges/${encodeURIComponent(id)}/answer`, {
+        method: "POST",
+        body: JSON.stringify({ answer: document.getElementById("challengeAnswer").value }),
+      });
+
+      if (response.data?.chat_id) document.getElementById("chatId").value = response.data.chat_id;
+    }
+
+    async function counterProposeClassic() {
+      const id = requirePostId();
+      if (!id) return;
+
+      const response = await request(`/api/posts/${id}/counter-propose`, {
+        method: "POST",
+        body: JSON.stringify({ text: document.getElementById("counterText").value }),
+      });
+
+      if (response.data?.id) document.getElementById("challengeId").value = response.data.id;
+    }
+
+    async function counterProposeChallenge() {
+      const id = document.getElementById("challengeId").value.trim();
+      if (!id) return write("Inserisci Challenge UUID.");
+
+      await request(`/api/challenges/${encodeURIComponent(id)}/counter-propose`, {
+        method: "POST",
+        body: JSON.stringify({ text: document.getElementById("counterText").value }),
+      });
+    }
+
+    async function counterReview(accepted) {
+      const id = document.getElementById("challengeId").value.trim();
+      if (!id) return write("Inserisci Challenge UUID.");
+
+      const response = await request(`/api/challenges/${encodeURIComponent(id)}/counter-review`, {
+        method: "POST",
+        body: JSON.stringify({ accepted }),
+      });
+
+      if (response.data?.chat_id) document.getElementById("chatId").value = response.data.chat_id;
+    }
+
+    async function karma() {
+      await request("/api/users/me/karma");
+    }
+
+    async function addPhoto() {
+      await request("/api/users/me/photos", {
+        method: "POST",
+        body: JSON.stringify({ photo_url: document.getElementById("photoUrl").value }),
+      });
+    }
+
+    async function deletePhoto() {
+      const id = document.getElementById("photoId").value.trim();
+      if (!id) return write("Inserisci Photo ID.");
+
+      await request(`/api/users/me/photos/${encodeURIComponent(id)}`, { method: "DELETE" });
     }
 
     function locationPayload() {

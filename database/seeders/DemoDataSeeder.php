@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Chat;
+use App\Models\Challenge;
 use App\Models\Comment;
 use App\Models\Favorite;
 use App\Models\Like;
@@ -65,6 +66,7 @@ class DemoDataSeeder extends Seeder
                         'avatar_color' => $color,
                         'auth_provider' => 'email',
                         'bio' => 'Profilo demo SpotOn.',
+                        'photos' => ["https://example.test/photos/{$email}.jpg"],
                         'karma' => random_int(0, 8),
                     ],
                 ));
@@ -196,6 +198,41 @@ class DemoDataSeeder extends Seeder
 
                 $post->update(['comment_count' => $post->comments()->count()]);
             }
+
+            $challengePost = $posts
+                ->first(fn (Post $post) => ! $post->secret_answer_hash && $post->author_id !== $testUser->id);
+            $challengeTarget = $users
+                ->where('is_admin', false)
+                ->first(fn (User $user) => $user->id === $challengePost->author_id);
+
+            Challenge::query()->create([
+                'post_id' => $challengePost->id,
+                'origin' => Challenge::ORIGIN_INVERTED,
+                'challenger_id' => $testUser->id,
+                'target_type' => Challenge::TARGET_POST_AUTHOR,
+                'target_user_id' => $challengeTarget->id,
+                'question' => 'Che dettaglio ricordi della scena?',
+                'answer_hash' => Hash::make('sorriso'),
+                'status' => Challenge::STATUS_PENDING,
+            ]);
+
+            $classicPost = $posts->first(fn (Post $post) => (bool) $post->secret_answer_hash);
+            $counterUser = $users
+                ->where('is_admin', false)
+                ->first(fn (User $user) => $user->id !== $classicPost->author_id);
+
+            Challenge::query()->create([
+                'post_id' => $classicPost->id,
+                'origin' => Challenge::ORIGIN_CLASSIC,
+                'challenger_id' => $classicPost->author_id,
+                'target_type' => Challenge::TARGET_POST_AUTHOR,
+                'target_user_id' => $counterUser->id,
+                'question' => $classicPost->secret_question,
+                'answer_hash' => $classicPost->secret_answer_hash,
+                'status' => Challenge::STATUS_COUNTER_PENDING,
+                'counter_text' => 'Non ricordo la parola esatta, ma ricordo il sorriso e la giacca chiara.',
+                'counter_proposed_by' => $counterUser->id,
+            ]);
 
             foreach ($users->where('is_admin', false)->take(4) as $user) {
                 $location = $locations->random();

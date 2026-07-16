@@ -16,6 +16,8 @@ class Chat extends Model
     protected $fillable = [
         'user_one_id',
         'user_two_id',
+        'origin_challenge_id',
+        'origin_post_id',
     ];
 
     protected $keyType = 'string';
@@ -47,6 +49,16 @@ class Chat extends Model
     public function latestMessage(): HasOne
     {
         return $this->hasOne(Message::class)->latest('sent_at');
+    }
+
+    public function originChallenge(): BelongsTo
+    {
+        return $this->belongsTo(Challenge::class, 'origin_challenge_id');
+    }
+
+    public function originPost(): BelongsTo
+    {
+        return $this->belongsTo(Post::class, 'origin_post_id');
     }
 
     public function hasParticipant(string $userId): bool

@@ -89,4 +89,14 @@ class User extends Authenticatable
     {
         return $this->hasMany(Comment::class, 'author_id');
     }
+
+    public function challenges(): HasMany
+    {
+        return $this->hasMany(Challenge::class, 'challenger_id');
+    }
+
+    public function challengeTargets(): HasMany
+    {
+        return $this->hasMany(Challenge::class, 'target_user_id');
+    }
 }

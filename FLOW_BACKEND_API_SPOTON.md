@@ -429,3 +429,50 @@ Prossimo blocco:
 - challenge invertita;
 - controproposta;
 - API foto/karma e rifiniture finali.
+
+---
+
+## Nuova Specifica - Blocco 2/2, Step 5-8
+
+Stato: completato localmente.
+
+Incluso:
+
+- challenge classica:
+  - `POST /api/posts/{post}/verify-answer`;
+  - risposta corretta sblocca Ghost;
+  - crea/riusa chat;
+  - aumenta `spot_on_count`;
+  - aumenta karma di chi risponde;
+- challenge invertita:
+  - `POST /api/challenges`;
+  - target autore post o autore commento;
+  - contatto diretto oppure domanda;
+  - `POST /api/challenges/{challenge}/answer`;
+- controproposta:
+  - `POST /api/posts/{post}/counter-propose`;
+  - `POST /api/challenges/{challenge}/counter-propose`;
+  - `POST /api/challenges/{challenge}/counter-review`;
+  - accettazione sblocca chat, karma e reveal Ghost quando previsto;
+- pending challenge:
+  - `GET /api/challenges/pending`;
+- profilo finale:
+  - `GET /api/users/me/karma`;
+  - `POST /api/users/me/photos`;
+  - `DELETE /api/users/me/photos/{photoId}`;
+  - limite 10 foto;
+- chat aggiornata con:
+  - `origin_challenge_id`;
+  - `origin_post_id`;
+- seeder demo aggiornato con challenge;
+- client `public/api-client.html` aggiornato;
+- doc test dedicato:
+  - `HANDOFF_CHATGPT_STEP_5_8_NUOVA_SPECIFICA.md`.
+
+Verifiche locali:
+
+- `php artisan test` OK: 57 test, 254 assertion;
+- `php artisan migrate:fresh --seed` OK;
+- `php artisan db:seed --class=DemoDataSeeder` OK;
+- `npm run build` OK;
+- `php artisan route:list --path=api` OK: 42 route.

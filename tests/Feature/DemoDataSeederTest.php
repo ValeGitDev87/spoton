@@ -25,6 +25,7 @@ class DemoDataSeederTest extends TestCase
         $this->assertDatabaseHas('messages', []);
         $this->assertDatabaseHas('favorites', []);
         $this->assertDatabaseHas('comments', []);
+        $this->assertDatabaseHas('challenges', []);
         $this->assertDatabaseHas('posts', ['is_anonymous' => true]);
     }
 }

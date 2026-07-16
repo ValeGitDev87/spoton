@@ -74,6 +74,11 @@ class Post extends Model
         return $this->hasMany(Comment::class);
     }
 
+    public function challenges(): HasMany
+    {
+        return $this->hasMany(Challenge::class);
+    }
+
     public function isActive(): bool
     {
         return $this->status === 'active' && $this->expires_at->isFuture();

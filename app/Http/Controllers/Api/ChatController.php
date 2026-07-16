@@ -112,6 +112,8 @@ class ChatController extends Controller
                 'avatar_color' => $other->avatar_color,
             ],
             'last_message' => $lastMessage ? $this->messagePayload($lastMessage) : null,
+            'origin_challenge_id' => $chat->origin_challenge_id,
+            'origin_post_id' => $chat->origin_post_id,
             'created_at' => $chat->created_at?->toISOString(),
             'updated_at' => $chat->updated_at?->toISOString(),
         ];
