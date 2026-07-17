@@ -9,6 +9,7 @@ use App\Http\Requests\Post\StorePostRequest;
 use App\Http\Requests\Post\UpdatePostRequest;
 use App\Models\Post;
 use App\Services\GeoDistance;
+use App\Services\PostAudioService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -79,7 +80,7 @@ class PostController extends Controller
         ]);
     }
 
-    public function store(StorePostRequest $request): JsonResponse
+    public function store(StorePostRequest $request, PostAudioService $postAudioService): JsonResponse
     {
         $post = Post::query()->create([
             ...$this->preparePostData($request->validated()),
@@ -87,6 +88,14 @@ class PostController extends Controller
             'expires_at' => now()->addHours(24),
             'status' => 'active',
         ]);
+
+        if ($request->hasFile('audio')) {
+            $post->update($postAudioService->store(
+                $post,
+                $request->file('audio'),
+                (float) $request->validated('audio_duration_seconds'),
+            ));
+        }
 
         $post->refresh()->load(['author', 'location']);
 
@@ -104,11 +113,25 @@ class PostController extends Controller
         ]);
     }
 
-    public function update(UpdatePostRequest $request, Post $post): JsonResponse
+    public function update(UpdatePostRequest $request, Post $post, PostAudioService $postAudioService): JsonResponse
     {
         abort_unless($post->author_id === $request->user()->id || $request->user()->is_admin, 403);
 
         $post->update($this->preparePostData($request->validated()));
+
+        if ($request->boolean('remove_audio')) {
+            $postAudioService->deleteForPost($post);
+            $post->update($postAudioService->emptyPayload());
+        }
+
+        if ($request->hasFile('audio')) {
+            $postAudioService->deleteForPost($post);
+            $post->update($postAudioService->store(
+                $post,
+                $request->file('audio'),
+                (float) $request->validated('audio_duration_seconds'),
+            ));
+        }
 
         return response()->json([
             'message' => 'OK',
@@ -167,6 +190,8 @@ class PostController extends Controller
 
     private function preparePostData(array $data): array
     {
+        unset($data['audio'], $data['audio_duration_seconds'], $data['remove_audio']);
+
         if (array_key_exists('song_quote', $data) && ! array_key_exists('musica', $data)) {
             $data['musica'] = $data['song_quote'];
         }

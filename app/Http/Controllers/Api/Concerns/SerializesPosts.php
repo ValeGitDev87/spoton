@@ -34,6 +34,13 @@ trait SerializesPosts
             'text' => $post->text,
             'musica' => $post->musica,
             'song_quote' => $post->song_quote ?? $post->musica,
+            'audio' => $post->audio_url ? [
+                'url' => $post->audio_url,
+                'mime' => $post->audio_mime,
+                'size_bytes' => $post->audio_size_bytes,
+                'size_kb' => $post->audio_size_bytes ? round($post->audio_size_bytes / 1024, 1) : null,
+                'duration_seconds' => $post->audio_duration_seconds,
+            ] : null,
             'sighting_date' => $post->sighting_date->toDateString(),
             'is_anonymous' => $post->is_anonymous,
             'secret_question' => $post->secret_question,

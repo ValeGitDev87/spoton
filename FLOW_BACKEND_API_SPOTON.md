@@ -471,8 +471,45 @@ Incluso:
 
 Verifiche locali:
 
-- `php artisan test` OK: 57 test, 254 assertion;
+- `php artisan test` OK: 60 test, 270 assertion;
 - `php artisan migrate:fresh --seed` OK;
 - `php artisan db:seed --class=DemoDataSeeder` OK;
 - `npm run build` OK;
 - `php artisan route:list --path=api` OK: 42 route.
+
+---
+
+## Extra - Note Audio Sui Post
+
+Stato: completato localmente.
+
+Incluso:
+
+- nota audio opzionale su `POST /api/posts`;
+- sostituzione audio su `PATCH /api/posts/{post}`;
+- rimozione audio con `remove_audio=true`;
+- durata massima 10 secondi;
+- peso massimo 1 MB;
+- formati accettati:
+  - `audio/mp4`;
+  - `audio/aac`;
+  - `audio/mpeg`;
+  - `audio/webm`;
+  - `video/mp4`;
+- storage Laravel configurabile:
+  - `SPOTON_AUDIO_DISK=public`;
+  - `SPOTON_AUDIO_DIRECTORY=post-audios`;
+- metadati salvati su post:
+  - `audio_disk`;
+  - `audio_path`;
+  - `audio_url`;
+  - `audio_mime`;
+  - `audio_size_bytes`;
+  - `audio_duration_seconds`;
+- response post con oggetto `audio`;
+- client `public/api-client.html` aggiornato;
+- verifica durata reale con `ffprobe` se `ffmpeg` e' installato sul server.
+
+Nota prodotto:
+
+- Per i post Ghost, l'audio puo rivelare la voce dell'autore. Lato app conviene mostrare un avviso prima della pubblicazione.

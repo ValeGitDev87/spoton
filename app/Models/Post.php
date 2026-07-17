@@ -18,6 +18,12 @@ class Post extends Model
         'text',
         'musica',
         'song_quote',
+        'audio_disk',
+        'audio_path',
+        'audio_url',
+        'audio_mime',
+        'audio_size_bytes',
+        'audio_duration_seconds',
         'sighting_date',
         'is_anonymous',
         'secret_question',
@@ -46,6 +52,8 @@ class Post extends Model
             'share_count' => 'integer',
             'io_cero_count' => 'integer',
             'spot_on_count' => 'integer',
+            'audio_size_bytes' => 'integer',
+            'audio_duration_seconds' => 'integer',
         ];
     }
 

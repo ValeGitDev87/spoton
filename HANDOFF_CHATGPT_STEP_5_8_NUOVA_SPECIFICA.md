@@ -252,15 +252,44 @@ curl -s -X POST "https://www.spotonapp.cloud/api/users/me/photos" \
   -d '{"photo_url":"https://example.test/photos/manual.jpg"}'
 ```
 
+Creare post con nota audio max 10 secondi:
+
+```bash
+LOCATION_ID="INCOLLA_LOCATION_ID"
+
+curl -s -X POST "https://www.spotonapp.cloud/api/posts" \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -F "location_id=$LOCATION_ID" \
+  -F "text=Post con nota audio test" \
+  -F "sighting_date=2026-07-17" \
+  -F "audio_duration_seconds=10" \
+  -F "audio=@/percorso/nota.m4a;type=audio/mp4"
+```
+
+Rimuovere audio da un post:
+
+```bash
+POST_ID="INCOLLA_POST_ID"
+
+curl -s -X PATCH "https://www.spotonapp.cloud/api/posts/$POST_ID" \
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $TOKEN" \
+  -d '{"remove_audio":true}'
+```
+
 ## Esito Atteso
 
 - 42 route API disponibili.
-- Test automatici locali: 57 test, 254 assertion.
+- Test automatici locali: 60 test, 270 assertion.
 - Challenge corrette non espongono `answer_hash`.
 - Chat create da challenge riportano `origin_challenge_id`.
 - Chat create da classica diretta riportano `origin_post_id`.
 - `karma` aumenta solo su verifica riuscita o controproposta accettata.
 - Foto profilo bloccate a massimo 10.
+- Nota audio post bloccata a massimo 10 secondi e 1 MB.
+- Response post con `audio.url`, `audio.mime`, `audio.size_bytes`, `audio.size_kb`, `audio.duration_seconds`.
 
 ## Stato Locale
 

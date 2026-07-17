@@ -40,4 +40,9 @@ return [
         'command' => env('SPOTON_BACKUP_COMMAND', '/usr/local/sbin/spotonapp-backup.sh'),
     ],
 
+    'spoton_audio' => [
+        'disk' => env('SPOTON_AUDIO_DISK', 'public'),
+        'directory' => env('SPOTON_AUDIO_DIRECTORY', 'post-audios'),
+    ],
+
 ];

@@ -63,6 +63,15 @@ DB_PASSWORD=PASSWORD_REALE
 SESSION_DRIVER=redis
 CACHE_STORE=redis
 QUEUE_CONNECTION=redis
+SPOTON_AUDIO_DISK=public
+SPOTON_AUDIO_DIRECTORY=post-audios
+```
+
+Per verificare davvero la durata audio lato server:
+
+```bash
+apt update
+apt install -y ffmpeg
 ```
 
 ---
@@ -184,3 +193,4 @@ Nel client browser ora sono disponibili anche:
 - Io c'ero;
 - presence;
 - chat.
+- nota audio post max 10 secondi.

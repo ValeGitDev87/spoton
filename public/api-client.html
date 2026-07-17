@@ -159,6 +159,10 @@
         <input id="postText" value="Ti ho vista vicino al mare, avevi un sorriso impossibile da dimenticare.">
         <label for="postMusica">Musica / ritornello</label>
         <input id="postMusica" value="Quel ritornello che faceva la la la">
+        <label for="postAudio">Nota audio max 10 sec</label>
+        <input id="postAudio" type="file" accept="audio/mp4,audio/aac,audio/mpeg,audio/webm">
+        <label for="postAudioDuration">Durata audio secondi</label>
+        <input id="postAudioDuration" type="number" min="0.1" max="10" step="0.1" value="10">
         <label for="postSecretQuestion">Domanda Ghost</label>
         <input id="postSecretQuestion" placeholder="Es. Che colore era il libro?">
         <label for="postSecretAnswer">Risposta Ghost</label>
@@ -174,6 +178,7 @@
           <button onclick="createPost()">Crea</button>
           <button onclick="postDetail()">Dettaglio</button>
           <button onclick="updatePost()">Modifica</button>
+          <button class="secondary" onclick="removePostAudio()">Rimuovi audio</button>
           <button class="secondary" onclick="deletePost()">Rimuovi</button>
           <button onclick="nearbyPosts()">Nearby posts</button>
           <button onclick="stories()">Stories</button>
@@ -364,9 +369,10 @@
     }
 
     async function request(path, options = {}) {
+      const isFormData = options.body instanceof FormData;
       const headers = {
         "Accept": "application/json",
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...(options.body && !isFormData ? { "Content-Type": "application/json" } : {}),
         ...(token() ? { "Authorization": `Bearer ${token()}` } : {}),
       };
 
@@ -390,6 +396,16 @@
       }
 
       return payload;
+    }
+
+    function toFormData(payload) {
+      const formData = new FormData();
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value !== null && value !== undefined && value !== "") {
+          formData.append(key, value);
+        }
+      });
+      return formData;
     }
 
     async function register() {
@@ -472,6 +488,20 @@
       return payload;
     }
 
+    function postRequestBody() {
+      const payload = postPayload();
+      const audio = document.getElementById("postAudio").files[0];
+
+      if (!audio) {
+        return JSON.stringify(payload);
+      }
+
+      const formData = toFormData(payload);
+      formData.append("audio", audio);
+      formData.append("audio_duration_seconds", document.getElementById("postAudioDuration").value);
+      return formData;
+    }
+
     async function posts() {
       await request("/api/posts");
     }
@@ -479,7 +509,7 @@
     async function createPost() {
       const payload = await request("/api/posts", {
         method: "POST",
-        body: JSON.stringify(postPayload()),
+        body: postRequestBody(),
       });
       if (payload.data?.id) document.getElementById("postId").value = payload.data.id;
     }
@@ -495,13 +525,25 @@
       const id = document.getElementById("postId").value.trim();
       if (!id) return write("Inserisci Post UUID.");
 
+      const body = postRequestBody();
+
+      if (body instanceof FormData) {
+        body.append("_method", "PATCH");
+      }
+
+      await request(`/api/posts/${encodeURIComponent(id)}`, {
+        method: body instanceof FormData ? "POST" : "PATCH",
+        body,
+      });
+    }
+
+    async function removePostAudio() {
+      const id = document.getElementById("postId").value.trim();
+      if (!id) return write("Inserisci Post UUID.");
+
       await request(`/api/posts/${encodeURIComponent(id)}`, {
         method: "PATCH",
-        body: JSON.stringify({
-          text: document.getElementById("postText").value,
-          musica: document.getElementById("postMusica").value || null,
-          sighting_date: document.getElementById("postDate").value,
-        }),
+        body: JSON.stringify({ remove_audio: true }),
       });
     }
 
