@@ -120,10 +120,41 @@
       </section>
 
       <section style="margin-top:16px;">
+        <h2>Email / Password</h2>
+        <label for="resetToken">Reset token</label>
+        <input id="resetToken" placeholder="Arriva via email di recupero">
+        <label for="newPassword">Nuova password</label>
+        <input id="newPassword" type="password" value="new-password123">
+        <div class="row">
+          <button onclick="resendVerification()">Reinvia verifica</button>
+          <button onclick="forgotPassword()">Forgot password</button>
+          <button onclick="resetPassword()">Reset password</button>
+          <button onclick="changePassword()">Cambia password</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
         <h2>Token</h2>
         <div id="tokenBox" class="token"></div>
         <div class="row">
           <button class="secondary" onclick="clearToken()">Svuota token</button>
+        </div>
+      </section>
+
+      <section style="margin-top:16px;">
+        <h2>Push Expo</h2>
+        <label for="deviceId">Device ID</label>
+        <input id="deviceId" value="browser-test-device">
+        <label for="expoToken">Expo token</label>
+        <input id="expoToken" value="ExponentPushToken[browser_test]">
+        <label for="pushTitle">Titolo test</label>
+        <input id="pushTitle" value="SpotOn test">
+        <label for="pushBody">Messaggio test</label>
+        <input id="pushBody" value="Push inviata dal client locale">
+        <div class="row">
+          <button onclick="registerPushToken()">Registra token</button>
+          <button class="secondary" onclick="revokePushToken()">Revoca token</button>
+          <button onclick="sendDevPush()">Push test</button>
         </div>
       </section>
 
@@ -442,6 +473,69 @@
     async function logout() {
       await request("/api/auth/logout", { method: "POST" });
       clearToken();
+    }
+
+    async function resendVerification() {
+      await request("/api/auth/email/verification-notification", { method: "POST" });
+    }
+
+    async function forgotPassword() {
+      await request("/api/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify({ email: document.getElementById("email").value }),
+      });
+    }
+
+    async function resetPassword() {
+      await request("/api/auth/reset-password", {
+        method: "POST",
+        body: JSON.stringify({
+          email: document.getElementById("email").value,
+          token: document.getElementById("resetToken").value,
+          password: document.getElementById("newPassword").value,
+          password_confirmation: document.getElementById("newPassword").value,
+        }),
+      });
+    }
+
+    async function changePassword() {
+      await request("/api/auth/password", {
+        method: "PATCH",
+        body: JSON.stringify({
+          current_password: document.getElementById("password").value,
+          password: document.getElementById("newPassword").value,
+          password_confirmation: document.getElementById("newPassword").value,
+        }),
+      });
+    }
+
+    async function registerPushToken() {
+      const deviceId = encodeURIComponent(document.getElementById("deviceId").value);
+      await request(`/api/me/push-tokens/${deviceId}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          token: document.getElementById("expoToken").value,
+          platform: "ios",
+          app_version: "dev-browser",
+          locale: navigator.language || "it-IT",
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Rome",
+        }),
+      });
+    }
+
+    async function revokePushToken() {
+      const deviceId = encodeURIComponent(document.getElementById("deviceId").value);
+      await request(`/api/me/push-tokens/${deviceId}`, { method: "DELETE" });
+    }
+
+    async function sendDevPush() {
+      await request("/api/dev/push/test", {
+        method: "POST",
+        body: JSON.stringify({
+          title: document.getElementById("pushTitle").value,
+          body: document.getElementById("pushBody").value,
+        }),
+      });
     }
 
     async function me() {

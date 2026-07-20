@@ -1,11 +1,13 @@
 <?php
 
-use App\Http\Controllers\Web\Admin\LocationController;
+use App\Http\Controllers\Web\Admin\BackupController;
 use App\Http\Controllers\Web\Admin\DashboardController;
+use App\Http\Controllers\Web\Admin\LocationController;
 use App\Http\Controllers\Web\Admin\PostController;
 use App\Http\Controllers\Web\Admin\UserController;
-use App\Http\Controllers\Web\Admin\BackupController;
 use App\Http\Controllers\Web\AuthController;
+use App\Http\Controllers\Web\EmailVerificationController;
+use App\Http\Controllers\Web\PasswordResetController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 
@@ -21,6 +23,20 @@ Route::middleware('guest')->group(function (): void {
 Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
+
+Route::get('/email/verify/{id}/{hash}', EmailVerificationController::class)
+    ->middleware(['signed', 'throttle:6,1'])
+    ->name('verification.verify');
+
+Route::get('/reset-password', [PasswordResetController::class, 'show'])
+    ->middleware('guest')
+    ->name('password.reset');
+Route::post('/reset-password', [PasswordResetController::class, 'store'])
+    ->middleware(['guest', 'throttle:5,1'])
+    ->name('password.update');
+Route::get('/reset-password/done', [PasswordResetController::class, 'result'])
+    ->middleware('guest')
+    ->name('password.reset.result');
 
 Route::middleware(['auth', EnsureAdmin::class])
     ->prefix('admin')

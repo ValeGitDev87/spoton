@@ -1,7 +1,7 @@
 <?php
 
-use App\Jobs\ExpirePostsJob;
 use App\Jobs\CloseStalePresenceSessionsJob;
+use App\Jobs\ExpirePostsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -12,3 +12,4 @@ Artisan::command('inspire', function () {
 
 Schedule::job(new ExpirePostsJob)->everyMinute()->withoutOverlapping();
 Schedule::job(new CloseStalePresenceSessionsJob)->everyMinute()->withoutOverlapping();
+Schedule::command('auth:clear-resets')->hourly();

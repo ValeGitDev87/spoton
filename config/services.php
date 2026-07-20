@@ -45,4 +45,21 @@ return [
         'directory' => env('SPOTON_AUDIO_DIRECTORY', 'post-audios'),
     ],
 
+    'spoton_auth' => [
+        'email_verification_expire_minutes' => (int) env('SPOTON_EMAIL_VERIFICATION_EXPIRE_MINUTES', 60),
+        'password_reset_expire_minutes' => (int) env('SPOTON_PASSWORD_RESET_EXPIRE_MINUTES', 30),
+        'password_reset_url' => env('SPOTON_PASSWORD_RESET_URL', rtrim((string) env('APP_URL', 'http://localhost'), '/').'/reset-password'),
+        'email_verified_url' => env('SPOTON_EMAIL_VERIFIED_URL', rtrim((string) env('APP_URL', 'http://localhost'), '/').'/email-verified'),
+    ],
+
+    'push' => [
+        'driver' => env('PUSH_DRIVER', 'log'),
+    ],
+
+    'expo' => [
+        'push_endpoint' => env('EXPO_PUSH_ENDPOINT', 'https://exp.host/--/api/v2/push/send'),
+        'receipts_endpoint' => env('EXPO_PUSH_RECEIPTS_ENDPOINT', 'https://exp.host/--/api/v2/push/getReceipts'),
+        'access_token' => env('EXPO_ACCESS_TOKEN'),
+    ],
+
 ];

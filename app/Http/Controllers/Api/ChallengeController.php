@@ -8,6 +8,8 @@ use App\Models\Chat;
 use App\Models\Comment;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\Push\PushNotificationService;
+use App\Support\Push\PushNotificationType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -159,6 +161,8 @@ class ChallengeController extends Controller
             'status' => Challenge::STATUS_PENDING,
         ])->load(['post.location', 'challenger', 'targetUser', 'sourceComment.author']);
 
+        $this->sendChallengePush($challenge->targetUser, 'Nuova sfida su SpotOn', $request->user()->display_name.' ti ha inviato una sfida.', PushNotificationType::CHALLENGE_RECEIVED, $challenge);
+
         return response()->json([
             'message' => 'OK',
             'data' => $this->challengePayload($challenge),
@@ -215,6 +219,8 @@ class ChallengeController extends Controller
             ];
         });
 
+        $this->sendChallengePush($result['challenge']->challenger, 'Sfida accettata', $request->user()->display_name.' ha risposto correttamente alla tua sfida.', PushNotificationType::CHALLENGE_ACCEPTED, $result['challenge']);
+
         return response()->json([
             'message' => 'OK',
             'data' => [
@@ -249,6 +255,8 @@ class ChallengeController extends Controller
             'counter_proposed_by' => $request->user()->id,
         ])->load(['post.location', 'challenger', 'targetUser', 'counterProposer']);
 
+        $this->sendChallengePush($challenge->targetUser, 'Nuova controproposta', $request->user()->display_name.' ha inviato una controproposta.', PushNotificationType::COUNTERPROPOSAL_RECEIVED, $challenge);
+
         return response()->json([
             'message' => 'OK',
             'data' => $this->challengePayload($challenge),
@@ -270,9 +278,12 @@ class ChallengeController extends Controller
             'counter_proposed_by' => $request->user()->id,
         ]);
 
+        $challenge->load(['post.location', 'challenger', 'targetUser', 'counterProposer']);
+        $this->sendChallengePush($challenge->challenger, 'Nuova controproposta', $request->user()->display_name.' ha inviato una controproposta.', PushNotificationType::COUNTERPROPOSAL_RECEIVED, $challenge);
+
         return response()->json([
             'message' => 'OK',
-            'data' => $this->challengePayload($challenge->refresh()->load(['post.location', 'challenger', 'targetUser', 'counterProposer'])),
+            'data' => $this->challengePayload($challenge),
         ]);
     }
 
@@ -290,6 +301,9 @@ class ChallengeController extends Controller
                 'status' => Challenge::STATUS_REJECTED,
                 'resolved_at' => now(),
             ]);
+
+            $challenge->load(['post.location', 'challenger', 'targetUser', 'counterProposer']);
+            $this->sendChallengePush($this->counterCounterpart($challenge, $request->user()), 'Controproposta rifiutata', 'La tua controproposta non e stata accettata.', PushNotificationType::COUNTERPROPOSAL_REJECTED, $challenge);
 
             return response()->json([
                 'message' => 'OK',
@@ -337,6 +351,8 @@ class ChallengeController extends Controller
             ];
         });
 
+        $this->sendChallengePush($this->counterCounterpart($result['challenge'], $request->user()), 'Controproposta accettata', 'La tua controproposta e stata accettata.', PushNotificationType::COUNTERPROPOSAL_ACCEPTED, $result['challenge']);
+
         return response()->json([
             'message' => 'OK',
             'data' => [
@@ -370,6 +386,39 @@ class ChallengeController extends Controller
         }
 
         return $challenge->challenger_id === $user->id;
+    }
+
+    private function counterCounterpart(Challenge $challenge, User $reviewer): ?User
+    {
+        $challenge->loadMissing(['counterProposer', 'targetUser']);
+
+        if ($challenge->counter_proposed_by && $challenge->counter_proposed_by !== $reviewer->id) {
+            return $challenge->counterProposer;
+        }
+
+        if ($challenge->target_user_id !== $reviewer->id) {
+            return $challenge->targetUser;
+        }
+
+        return null;
+    }
+
+    private function sendChallengePush(?User $recipient, string $title, string $body, string $type, Challenge $challenge): void
+    {
+        if (! $recipient) {
+            return;
+        }
+
+        app(PushNotificationService::class)->sendToUser(
+            $recipient,
+            $title,
+            $body,
+            [
+                'type' => $type,
+                'challenge_id' => $challenge->id,
+                'post_id' => $challenge->post_id,
+            ],
+        );
     }
 
     private function createOrReuseChat(string $firstUserId, string $secondUserId, array $origin = []): Chat

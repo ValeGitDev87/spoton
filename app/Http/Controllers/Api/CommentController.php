@@ -7,6 +7,8 @@ use App\Models\Comment;
 use App\Models\Favorite;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\Push\PushNotificationService;
+use App\Support\Push\PushNotificationType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -54,6 +56,7 @@ class CommentController extends Controller
         });
 
         $comment->load(['author', 'taggedUser']);
+        $this->sendCommentPush($request->user(), $post->refresh(), $comment);
 
         return response()->json([
             'message' => 'OK',
@@ -119,5 +122,40 @@ class CommentController extends Controller
             'text' => $comment->text,
             'created_at' => $comment->created_at?->toISOString(),
         ];
+    }
+
+    private function sendCommentPush(User $author, Post $post, Comment $comment): void
+    {
+        if ($comment->taggedUser && $comment->tagged_user_id !== $author->id) {
+            app(PushNotificationService::class)->sendToUser(
+                $comment->taggedUser,
+                'Ti hanno taggato su SpotOn',
+                $author->display_name.' ti ha menzionato in un commento.',
+                [
+                    'type' => PushNotificationType::USER_MENTIONED,
+                    'post_id' => $post->id,
+                    'comment_id' => $comment->id,
+                ],
+            );
+
+            return;
+        }
+
+        $post->loadMissing('author');
+
+        if ($post->author_id === $author->id) {
+            return;
+        }
+
+        app(PushNotificationService::class)->sendToUser(
+            $post->author,
+            'Nuovo commento su SpotOn',
+            $author->display_name.' ha commentato il tuo annuncio.',
+            [
+                'type' => PushNotificationType::NEW_COMMENT,
+                'post_id' => $post->id,
+                'comment_id' => $comment->id,
+            ],
+        );
     }
 }

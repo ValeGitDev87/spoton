@@ -1,10 +1,13 @@
 <?php
 
-use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AdminLocationController;
-use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AuthPasswordController;
 use App\Http\Controllers\Api\ChallengeController;
+use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\DevPushTestController;
+use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\FavoriteController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\MapController;
@@ -12,16 +15,24 @@ use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\PostEngagementController;
 use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\StoryController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
+Route::post('/auth/forgot-password', [AuthPasswordController::class, 'forgot'])->middleware('throttle:5,1');
+Route::post('/auth/reset-password', [AuthPasswordController::class, 'reset'])->middleware('throttle:5,1');
 
 Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::post('/auth/email/verification-notification', [EmailVerificationController::class, 'store'])->middleware('throttle:3,1');
+    Route::patch('/auth/password', [AuthPasswordController::class, 'update'])->middleware('throttle:5,1');
+    Route::put('/me/push-tokens/{deviceId}', [PushTokenController::class, 'upsert']);
+    Route::delete('/me/push-tokens/{deviceId}', [PushTokenController::class, 'destroy']);
+    Route::post('/dev/push/test', DevPushTestController::class)->middleware('throttle:5,1');
     Route::post('/presence/ping', [PresenceController::class, 'ping']);
     Route::get('/users/me/karma', [ProfileController::class, 'karma']);
     Route::post('/users/me/photos', [ProfileController::class, 'storePhoto']);

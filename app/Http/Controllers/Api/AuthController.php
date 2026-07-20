@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -16,6 +17,9 @@ class AuthController extends Controller
     public function register(RegisterRequest $request): JsonResponse
     {
         $user = User::query()->create($request->validated());
+
+        event(new Registered($user));
+        $user->sendEmailVerificationNotification();
 
         return response()->json([
             'message' => 'OK',
@@ -79,6 +83,7 @@ class AuthController extends Controller
             'photos' => $user->photos ?? [],
             'karma' => $user->karma ?? 0,
             'auth_provider' => $user->auth_provider ?? 'email',
+            'email_verified' => $user->hasVerifiedEmail(),
             'is_admin' => $user->is_admin,
         ];
     }
