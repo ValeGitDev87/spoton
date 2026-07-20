@@ -69,6 +69,31 @@ class PushNotificationApiTest extends TestCase
         ]);
     }
 
+    public function test_authenticated_user_can_register_new_expo_push_token_format(): void
+    {
+        $user = User::factory()->create();
+        $token = 'ExpoPushToken[new_format_token]';
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->putJson('/api/me/push-tokens/iphone-new-format', [
+                'token' => $token,
+                'platform' => 'ios',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.device_id', 'iphone-new-format')
+            ->assertJsonPath('data.platform', 'ios')
+            ->assertJsonPath('data.is_active', true)
+            ->assertJsonMissingPath('data.token');
+
+        $this->assertDatabaseHas('push_tokens', [
+            'user_id' => $user->id,
+            'device_id' => 'iphone-new-format',
+            'token_hash' => PushToken::hashToken($token),
+            'is_active' => true,
+        ]);
+    }
+
     public function test_same_expo_token_is_moved_to_latest_user_without_leaking_token(): void
     {
         $first = User::factory()->create();

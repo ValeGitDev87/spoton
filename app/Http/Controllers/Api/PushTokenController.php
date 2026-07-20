@@ -13,7 +13,7 @@ class PushTokenController extends Controller
     public function upsert(Request $request, string $deviceId): JsonResponse
     {
         $data = $request->validate([
-            'token' => ['required', 'string', 'max:512', 'regex:/^ExponentPushToken\\[[A-Za-z0-9_\\-]+\\]$/'],
+            'token' => ['required', 'string', 'max:512', 'regex:/^(?:ExponentPushToken|ExpoPushToken)\\[[A-Za-z0-9_\\-]+\\]$/'],
             'platform' => ['required', Rule::in(['ios', 'android'])],
             'app_version' => ['nullable', 'string', 'max:50'],
             'locale' => ['nullable', 'string', 'max:20'],
