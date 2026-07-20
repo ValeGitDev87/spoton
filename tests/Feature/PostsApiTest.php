@@ -6,8 +6,8 @@ use App\Models\Location;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Carbon;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -133,6 +133,68 @@ class PostsApiTest extends TestCase
         $this->assertNotNull($post->audio_path);
         $this->assertSame('public', $post->audio_disk);
         $this->assertSame(122880, $post->audio_size_bytes);
+        Storage::disk('public')->assertExists($post->audio_path);
+    }
+
+    public function test_authenticated_user_can_upload_macos_m4a_audio(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $location = $this->location();
+
+        $response = $this
+            ->actingAs($user, 'sanctum')
+            ->post('/api/posts', [
+                'location_id' => $location->id,
+                'text' => 'Nota audio M4A generata su macOS.',
+                'sighting_date' => now()->toDateString(),
+                'audio_duration_seconds' => 1,
+                'audio' => UploadedFile::fake()->create(
+                    'nota.m4a',
+                    120,
+                    'audio/x-m4a'
+                ),
+            ], ['Accept' => 'application/json'])
+            ->assertCreated()
+            ->assertJsonPath('data.audio.mime', 'audio/x-m4a')
+            ->assertJsonPath('data.audio.duration_seconds', 1);
+
+        $post = Post::query()->findOrFail($response->json('data.id'));
+
+        Storage::disk('public')->assertExists($post->audio_path);
+    }
+
+    public function test_owner_can_update_post_with_macos_m4a_audio(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $post = Post::query()->create([
+            'author_id' => $user->id,
+            'location_id' => $this->location()->id,
+            'text' => 'Post senza audio',
+            'sighting_date' => now()->toDateString(),
+            'expires_at' => now()->addDay(),
+            'status' => 'active',
+        ]);
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->patch("/api/posts/{$post->id}", [
+                'audio_duration_seconds' => 1,
+                'audio' => UploadedFile::fake()->create(
+                    'nota.m4a',
+                    120,
+                    'audio/x-m4a'
+                ),
+            ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.audio.mime', 'audio/x-m4a')
+            ->assertJsonPath('data.audio.duration_seconds', 1);
+
+        $post->refresh();
+
         Storage::disk('public')->assertExists($post->audio_path);
     }
 
