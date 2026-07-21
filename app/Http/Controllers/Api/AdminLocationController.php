@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Location\StoreLocationRequest;
 use App\Http\Requests\Location\UpdateLocationRequest;
 use App\Models\Location;
+use App\Support\LocationIcon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -44,6 +45,7 @@ class AdminLocationController extends Controller
         $data = $request->validated();
         $data['short'] = $data['short'] ?? $data['name'];
         $data['geo_radius_meters'] = $data['geo_radius_meters'] ?? 100;
+        $data['icon'] = $data['icon'] ?? LocationIcon::DEFAULT;
         $data['is_active'] = $data['is_active'] ?? true;
 
         $location = Location::query()->create($data);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Concerns;
 
 use App\Models\Location;
 use App\Models\PresenceSession;
+use App\Support\LocationIcon;
 
 trait SerializesLocations
 {
@@ -18,8 +19,10 @@ trait SerializesLocations
             'latitude' => (float) $location->latitude,
             'longitude' => (float) $location->longitude,
             'geo_radius_meters' => $location->geo_radius_meters,
-            'icon' => $location->icon,
+            'icon' => $location->icon ?: LocationIcon::DEFAULT,
+            'icon_library' => 'ionicons',
             'is_active' => $location->is_active,
+            'stories_count' => (int) ($location->active_stories_count ?? 0),
             'connected_now_count' => PresenceSession::query()
                 ->where('location_id', $location->id)
                 ->whereNull('ended_at')

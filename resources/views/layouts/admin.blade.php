@@ -78,6 +78,21 @@
             font: inherit;
             background: #fff;
         }
+        .icon-picker { display: grid; grid-template-columns: 40px 1fr; gap: 8px; align-items: center; }
+        .icon-preview {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: 1px solid #d0d5dd;
+            border-radius: 8px;
+            background: #111827;
+            color: #fff;
+            font-size: 22px;
+        }
+        .field-help { display: block; margin-top: 5px; color: #667085; font-size: 12px; }
+        .table-icon { font-size: 20px; vertical-align: middle; }
         .field { margin-bottom: 14px; }
         .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
         .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
@@ -186,5 +201,8 @@
             @yield('content')
         </main>
     </div>
+    <script type="module" src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.4.0/dist/ionicons/ionicons.js"></script>
+    @stack('scripts')
 </body>
 </html>

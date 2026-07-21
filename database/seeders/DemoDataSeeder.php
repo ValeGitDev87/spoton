@@ -88,12 +88,12 @@ class DemoDataSeeder extends Seeder
             }
 
             $locations = collect([
-                ['Metro Mergellina', 'Napoli', 'metro', 40.8319000, 14.2193000, 'metro'],
-                ['Bar Nilo', 'Napoli', 'bar', 40.8495000, 14.2569000, 'coffee'],
-                ['Piazza Plebiscito', 'Napoli', 'piazza', 40.8359000, 14.2488000, 'landmark'],
-                ['Lungomare Caracciolo', 'Napoli', 'lungomare', 40.8297000, 14.2284000, 'waves'],
-                ['Villa Comunale', 'Napoli', 'parco', 40.8331000, 14.2294000, 'trees'],
-                ['Stazione Salerno', 'Salerno', 'altro', 40.6759000, 14.7720000, 'train'],
+                ['Metro Mergellina', 'Napoli', 'metro', 40.8319000, 14.2193000, 'subway-outline'],
+                ['Bar Nilo', 'Napoli', 'bar', 40.8495000, 14.2569000, 'cafe-outline'],
+                ['Piazza Plebiscito', 'Napoli', 'piazza', 40.8359000, 14.2488000, 'business-outline'],
+                ['Lungomare Caracciolo', 'Napoli', 'lungomare', 40.8297000, 14.2284000, 'water-outline'],
+                ['Villa Comunale', 'Napoli', 'parco', 40.8331000, 14.2294000, 'leaf-outline'],
+                ['Stazione Salerno', 'Salerno', 'altro', 40.6759000, 14.7720000, 'train-outline'],
             ])->map(fn (array $location) => Location::query()->updateOrCreate(
                 ['name' => $location[0], 'city' => $location[1]],
                 [

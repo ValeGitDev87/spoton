@@ -26,6 +26,7 @@
                     <th>Nome</th>
                     <th>Citta</th>
                     <th>Tipo</th>
+                    <th>Icona</th>
                     <th>Coordinate</th>
                     <th>Raggio</th>
                     <th>Stato</th>
@@ -43,6 +44,7 @@
                         </td>
                         <td>{{ $location->city }}</td>
                         <td>{{ $location->type }}</td>
+                        <td><ion-icon class="table-icon" name="{{ $location->icon ?: 'location-outline' }}"></ion-icon></td>
                         <td>{{ $location->latitude }}, {{ $location->longitude }}</td>
                         <td>{{ $location->geo_radius_meters }} m</td>
                         <td>
@@ -63,7 +65,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7">Nessun luogo trovato.</td>
+                        <td colspan="8">Nessun luogo trovato.</td>
                     </tr>
                 @endforelse
             </tbody>

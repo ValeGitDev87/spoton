@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Location\StoreLocationRequest;
 use App\Http\Requests\Location\UpdateLocationRequest;
 use App\Models\Location;
+use App\Support\LocationIcon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -40,9 +41,11 @@ class LocationController extends Controller
         return view('admin.locations.create', [
             'location' => new Location([
                 'type' => 'altro',
+                'icon' => LocationIcon::DEFAULT,
                 'geo_radius_meters' => 100,
                 'is_active' => true,
             ]),
+            'iconOptions' => LocationIcon::options(),
         ]);
     }
 
@@ -64,6 +67,7 @@ class LocationController extends Controller
     {
         return view('admin.locations.edit', [
             'location' => $location,
+            'iconOptions' => LocationIcon::options(),
         ]);
     }
 

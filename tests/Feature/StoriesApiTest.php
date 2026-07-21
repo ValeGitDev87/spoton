@@ -32,6 +32,9 @@ class StoriesApiTest extends TestCase
             ->getJson("/api/locations/{$location->id}/stories")
             ->assertOk()
             ->assertJsonPath('data.location.id', $location->id)
+            ->assertJsonPath('data.location.icon', 'location-outline')
+            ->assertJsonPath('data.location.icon_library', 'ionicons')
+            ->assertJsonPath('data.location.stories_count', 2)
             ->assertJsonCount(2, 'data.stories')
             ->assertJsonPath('data.stories.0.id', $first->id)
             ->assertJsonPath('data.stories.1.id', $second->id);

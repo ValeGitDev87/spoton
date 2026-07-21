@@ -40,7 +40,7 @@ class AdminLocationsApiTest extends TestCase
                 'latitude' => 40.8331,
                 'longitude' => 14.2294,
                 'geo_radius_meters' => 250,
-                'icon' => 'trees',
+                'icon' => 'leaf-outline',
             ])
             ->assertCreated()
             ->assertJsonPath('data.name', 'Villa Comunale')
@@ -52,6 +52,24 @@ class AdminLocationsApiTest extends TestCase
             'type' => 'parco',
             'geo_radius_meters' => 250,
         ]);
+    }
+
+    public function test_admin_cannot_save_an_unknown_location_icon(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this
+            ->actingAs($admin, 'sanctum')
+            ->postJson('/api/admin/locations', [
+                'name' => 'Luogo senza icona valida',
+                'city' => 'Napoli',
+                'type' => 'altro',
+                'latitude' => 40.8331,
+                'longitude' => 14.2294,
+                'icon' => 'codice-inventato',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('icon');
     }
 
     public function test_admin_can_update_and_delete_location(): void

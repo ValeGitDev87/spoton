@@ -19,6 +19,8 @@ class NearbyPostsRequest extends FormRequest
             'radius_km' => ['sometimes', 'numeric', 'min:1', 'max:200'],
             'search' => ['sometimes', 'nullable', 'string', 'max:120'],
             'location_id' => ['sometimes', 'uuid', 'exists:locations,id'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:30'],
         ];
     }
 }

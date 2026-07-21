@@ -31,7 +31,10 @@ class MapAndNearbyPostsApiTest extends TestCase
             ->assertOk()
             ->assertJsonCount(1, 'data.posts')
             ->assertJsonPath('data.posts.0.id', $nearPost->id)
-            ->assertJsonPath('data.posts.0.distance_km', 0.98);
+            ->assertJsonPath('data.posts.0.distance_km', 0.98)
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.per_page', 30)
+            ->assertJsonPath('meta.total', 1);
 
         Carbon::setTestNow();
     }
@@ -51,6 +54,36 @@ class MapAndNearbyPostsApiTest extends TestCase
             ->assertJsonPath('data.locations.0.id', $location->id)
             ->assertJsonPath('data.posts.0.id', $post->id)
             ->assertJsonPath('data.radius_km', 200);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_nearby_posts_are_paginated_thirty_at_a_time(): void
+    {
+        Carbon::setTestNow('2026-07-09 12:00:00');
+
+        $user = User::factory()->create();
+        $location = $this->location('Piazza Plebiscito', 'Napoli', 40.8359000, 14.2488000);
+
+        foreach (range(1, 35) as $index) {
+            $this->makePost($user, $location, "Post {$index}", now()->addDay());
+        }
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->getJson('/api/posts/nearby?lat=40.8518&lng=14.2681&radius_km=200&per_page=30&page=1')
+            ->assertOk()
+            ->assertJsonCount(30, 'data.posts')
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.last_page', 2)
+            ->assertJsonPath('meta.total', 35);
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->getJson('/api/posts/nearby?lat=40.8518&lng=14.2681&radius_km=200&per_page=30&page=2')
+            ->assertOk()
+            ->assertJsonCount(5, 'data.posts')
+            ->assertJsonPath('meta.current_page', 2);
 
         Carbon::setTestNow();
     }

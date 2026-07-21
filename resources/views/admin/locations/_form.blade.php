@@ -37,9 +37,29 @@
 
     <div class="field">
         <label for="icon">Icona</label>
-        <input id="icon" name="icon" value="{{ old('icon', $location->icon) }}" placeholder="map-pin">
+        <div class="icon-picker">
+            <div class="icon-preview" aria-hidden="true">
+                <ion-icon id="location-icon-preview" name="{{ old('icon', $location->icon) }}"></ion-icon>
+            </div>
+            <select id="icon" name="icon" required>
+                @foreach ($iconOptions as $iconCode => $iconLabel)
+                    <option value="{{ $iconCode }}" @selected(old('icon', $location->icon) === $iconCode)>
+                        {{ $iconLabel }} ({{ $iconCode }})
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <small class="field-help">L'anteprima sara usata anche nelle storie e accanto al luogo nell'app.</small>
     </div>
 </div>
+
+@push('scripts')
+    <script>
+        document.getElementById('icon').addEventListener('change', function () {
+            document.getElementById('location-icon-preview').setAttribute('name', this.value);
+        });
+    </script>
+@endpush
 
 <div class="grid3">
     <div class="field">

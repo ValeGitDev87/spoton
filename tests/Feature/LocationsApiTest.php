@@ -37,7 +37,9 @@ class LocationsApiTest extends TestCase
             ->getJson('/api/locations')
             ->assertOk()
             ->assertJsonPath('data.0.name', 'Metro Mergellina')
-            ->assertJsonPath('data.0.city', 'Napoli');
+            ->assertJsonPath('data.0.city', 'Napoli')
+            ->assertJsonPath('data.0.icon', 'location-outline')
+            ->assertJsonPath('data.0.icon_library', 'ionicons');
     }
 
     public function test_nearby_locations_are_filtered_and_sorted_by_distance(): void

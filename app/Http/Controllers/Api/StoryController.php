@@ -26,6 +26,8 @@ class StoryController extends Controller
             ->map(fn (Post $post) => $this->postPayload($post, $request->user()))
             ->values();
 
+        $location->setAttribute('active_stories_count', $posts->count());
+
         return response()->json([
             'message' => 'OK',
             'data' => [

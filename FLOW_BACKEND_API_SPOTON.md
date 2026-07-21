@@ -513,3 +513,28 @@ Incluso:
 Nota prodotto:
 
 - Per i post Ghost, l'audio puo rivelare la voce dell'autore. Lato app conviene mostrare un avviso prima della pubblicazione.
+
+---
+
+## Feed Vicino E Icone Luoghi
+
+Stato: completato localmente.
+
+Incluso:
+
+- la posizione dell'utente filtra il feed, senza visualizzare una mappa;
+- `GET /api/posts/nearby` restituisce 30 post per pagina ordinati per distanza;
+- parametri `page` e `per_page`, con `per_page` massimo 30;
+- metadati `current_page`, `last_page`, `per_page` e `total` per lo scroll progressivo;
+- esclusione dei post associati a luoghi disattivati;
+- catalogo controllato di codici Ionicons per i luoghi;
+- selettore icona con anteprima nel CRUD web admin;
+- normalizzazione dei vecchi codici icona tramite migration;
+- API luoghi arricchita con `icon`, `icon_library=ionicons` e `stories_count`;
+- frontend Expo aggiornato con feed geolocalizzato, caricamento progressivo e icone luogo nelle storie, nei post e nella scelta luogo.
+
+Verifiche locali:
+
+- `php artisan test` OK: 78 test, 358 assertion;
+- `npx tsc --noEmit` OK;
+- `npx expo-doctor` OK: 18/18 controlli.

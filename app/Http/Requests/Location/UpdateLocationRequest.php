@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Location;
 
+use App\Support\LocationIcon;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateLocationRequest extends FormRequest
 {
@@ -21,7 +23,7 @@ class UpdateLocationRequest extends FormRequest
             'latitude' => ['sometimes', 'numeric', 'between:-90,90'],
             'longitude' => ['sometimes', 'numeric', 'between:-180,180'],
             'geo_radius_meters' => ['sometimes', 'integer', 'min:1', 'max:200000'],
-            'icon' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'icon' => ['sometimes', 'required', 'string', Rule::in(LocationIcon::codes())],
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

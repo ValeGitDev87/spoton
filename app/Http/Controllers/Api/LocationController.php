@@ -2,18 +2,26 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\SerializesLocations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Location\NearbyLocationsRequest;
 use App\Models\Location;
 use App\Services\GeoDistance;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LocationController extends Controller
 {
+    use SerializesLocations;
+
     public function index(Request $request): JsonResponse
     {
         $locations = Location::query()
+            ->withCount(['posts as active_stories_count' => fn (Builder $query) => $query
+                ->where('status', 'active')
+                ->where('created_at', '>', now()->subDay())
+                ->where('expires_at', '>', now())])
             ->where('is_active', true)
             ->when($request->query('search'), function ($query, string $search): void {
                 $query->where(function ($inner) use ($search): void {
@@ -42,6 +50,10 @@ class LocationController extends Controller
         $radiusKm = (float) ($request->validated('radius_km') ?? 200);
 
         $locations = Location::query()
+            ->withCount(['posts as active_stories_count' => fn (Builder $query) => $query
+                ->where('status', 'active')
+                ->where('created_at', '>', now()->subDay())
+                ->where('expires_at', '>', now())])
             ->where('is_active', true)
             ->get()
             ->map(function (Location $location) use ($lat, $lng): array {
@@ -69,22 +81,5 @@ class LocationController extends Controller
                 'locations' => $locations,
             ],
         ]);
-    }
-
-    private function locationPayload(Location $location): array
-    {
-        return [
-            'id' => $location->id,
-            'name' => $location->name,
-            'short' => $location->short,
-            'city' => $location->city,
-            'type' => $location->type,
-            'latitude' => (float) $location->latitude,
-            'longitude' => (float) $location->longitude,
-            'geo_radius_meters' => $location->geo_radius_meters,
-            'icon' => $location->icon,
-            'is_active' => $location->is_active,
-            'connected_now_count' => 0,
-        ];
     }
 }

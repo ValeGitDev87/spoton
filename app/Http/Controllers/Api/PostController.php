@@ -64,8 +64,12 @@ class PostController extends Controller
         $lat = (float) $request->validated('lat');
         $lng = (float) $request->validated('lng');
         $radiusKm = (float) ($request->validated('radius_km') ?? 200);
+        $page = (int) ($request->validated('page') ?? 1);
+        $perPage = (int) ($request->validated('per_page') ?? 30);
 
-        $posts = $this->nearbyPosts($request, $lat, $lng, $radiusKm);
+        $allPosts = collect($this->nearbyPosts($request, $lat, $lng, $radiusKm));
+        $posts = $allPosts->forPage($page, $perPage)->values();
+        $lastPage = max(1, (int) ceil($allPosts->count() / $perPage));
 
         return response()->json([
             'message' => 'OK',
@@ -76,6 +80,12 @@ class PostController extends Controller
                 ],
                 'radius_km' => $radiusKm,
                 'posts' => $posts,
+            ],
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => $lastPage,
+                'per_page' => $perPage,
+                'total' => $allPosts->count(),
             ],
         ]);
     }
@@ -159,6 +169,7 @@ class PostController extends Controller
             ->with(['author', 'location'])
             ->where('status', 'active')
             ->where('expires_at', '>', Carbon::now())
+            ->whereHas('location', fn (Builder $query) => $query->where('is_active', true))
             ->when($request->query('location_id'), fn (Builder $query, string $locationId) => $query->where('location_id', $locationId))
             ->when($request->query('search'), function (Builder $query, string $search): void {
                 $query->where(function (Builder $inner) use ($search): void {

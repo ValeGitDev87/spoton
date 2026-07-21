@@ -66,7 +66,7 @@ class AdminLocationsWebTest extends TestCase
                 'latitude' => 40.8331000,
                 'longitude' => 14.2294000,
                 'geo_radius_meters' => 250,
-                'icon' => 'trees',
+                'icon' => 'leaf-outline',
                 'is_active' => '1',
             ])
             ->assertRedirect('/admin/locations');
@@ -106,7 +106,7 @@ class AdminLocationsWebTest extends TestCase
                 'latitude' => 40.6824000,
                 'longitude' => 14.7681000,
                 'geo_radius_meters' => 500,
-                'icon' => 'landmark',
+                'icon' => 'business-outline',
             ])
             ->assertRedirect('/admin/locations');
 
