@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\SerializesUsers;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
@@ -14,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    use SerializesUsers;
+
     public function register(RegisterRequest $request): JsonResponse
     {
         $user = User::query()->create($request->validated());
@@ -39,6 +42,8 @@ class AuthController extends Controller
                 'email' => ['Credenziali non valide.'],
             ]);
         }
+
+        abort_if($user->is_suspended, 403, 'Account sospeso. Contatta l\'assistenza.');
 
         return response()->json([
             'message' => 'OK',
@@ -69,22 +74,5 @@ class AuthController extends Controller
                 'logged_out' => true,
             ],
         ]);
-    }
-
-    private function userPayload(User $user): array
-    {
-        return [
-            'id' => $user->id,
-            'email' => $user->email,
-            'display_name' => $user->display_name,
-            'avatar_color' => $user->avatar_color,
-            'avatar_url' => $user->avatar_url,
-            'bio' => $user->bio,
-            'photos' => $user->photos ?? [],
-            'karma' => $user->karma ?? 0,
-            'auth_provider' => $user->auth_provider ?? 'email',
-            'email_verified' => $user->hasVerifiedEmail(),
-            'is_admin' => $user->is_admin,
-        ];
     }
 }

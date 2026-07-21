@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -32,6 +33,9 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'karma',
         'auth_provider',
         'is_admin',
+        'is_suspended',
+        'suspended_at',
+        'suspension_reason',
         'last_known_latitude',
         'last_known_longitude',
         'last_location_update',
@@ -53,6 +57,8 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'welcome_email_sent_at' => 'datetime',
             'password_changed_at' => 'datetime',
             'is_admin' => 'boolean',
+            'is_suspended' => 'boolean',
+            'suspended_at' => 'datetime',
             'photos' => 'array',
             'karma' => 'integer',
             'last_location_update' => 'datetime',
@@ -108,6 +114,16 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function pushTokens(): HasMany
     {
         return $this->hasMany(PushToken::class);
+    }
+
+    public function reportsMade(): HasMany
+    {
+        return $this->hasMany(Report::class, 'reporter_id');
+    }
+
+    public function reportsReceived(): MorphMany
+    {
+        return $this->morphMany(Report::class, 'reportable');
     }
 
     public function sendEmailVerificationNotification(): void

@@ -539,3 +539,41 @@ Verifiche locali:
 - `php artisan test` OK: 79 test, 374 assertion;
 - `npx tsc --noEmit` OK;
 - `npx expo-doctor` OK: 18/18 controlli.
+
+---
+
+## Backend Blocco 1 - Profilo E Moderazione
+
+Stato: completato localmente.
+
+Incluso:
+
+- `PATCH /api/me` per modificare `display_name`, `bio`, `avatar_color` e `avatar_url`;
+- campi protetti come email, karma e ruolo non sono modificabili dal profilo;
+- `POST /api/reports` per segnalare post o utenti;
+- motivi supportati: `spam`, `harassment`, `inappropriate`, `fake`, `privacy`, `other`;
+- prevenzione di auto-segnalazioni e duplicati pending;
+- migration `reports` con revisore, stato, nota ed elemento polimorfico;
+- stato sospensione utente con data e motivazione;
+- token API revocati quando un utente viene sospeso;
+- middleware che blocca i token gia emessi di un account sospeso;
+- dashboard admin con conteggio segnalazioni pending;
+- pagina `/admin/reports` con filtri e coda manuale;
+- azione admin su report post: rimozione del post;
+- azione admin su report utente: sospensione dell'account;
+- sospensione e riattivazione manuale dalla tabella utenti;
+- rate limiting dedicato per post, commenti, messaggi, engagement, challenge, risposte, controproposte e report.
+
+Nuove rotte:
+
+```text
+PATCH /api/me
+POST  /api/reports
+GET   /admin/reports
+PATCH /admin/reports/{report}
+PATCH /admin/users/{user}/status
+```
+
+Verifiche locali:
+
+- `php artisan test` OK: 88 test, 425 assertion.

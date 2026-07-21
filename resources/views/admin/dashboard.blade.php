@@ -22,9 +22,9 @@
             <small>{{ $stats['active_posts'] }} attivi</small>
         </section>
         <section class="stat-card">
-            <span>Post rimossi</span>
-            <strong>{{ $stats['removed_posts'] }}</strong>
-            <small>{{ $stats['expired_posts'] }} scaduti</small>
+            <span>Segnalazioni</span>
+            <strong>{{ $stats['pending_reports'] }}</strong>
+            <small><a href="{{ route('admin.reports.index', ['status' => 'pending']) }}">Da revisionare</a></small>
         </section>
     </div>
 

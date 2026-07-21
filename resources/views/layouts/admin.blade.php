@@ -151,6 +151,10 @@
         .badge.status-expired { background: #fffaeb; color: #b54708; }
         .badge.status-removed { background: #fef3f2; color: #b42318; }
         .badge.status-flagged { background: #fdf2fa; color: #c11574; }
+        .badge.status-pending { background: #fffaeb; color: #b54708; }
+        .badge.status-reviewed { background: #eff8ff; color: #175cd3; }
+        .badge.status-dismissed { background: #f2f4f7; color: #667085; }
+        .badge.status-actioned { background: #fef3f2; color: #b42318; }
         .alert {
             margin-bottom: 14px;
             padding: 10px 12px;
@@ -195,6 +199,7 @@
             <a class="nav-link {{ request()->routeIs('admin.locations.*') ? 'active' : '' }}" href="{{ route('admin.locations.index') }}">Luoghi</a>
             <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">Utenti</a>
             <a class="nav-link {{ request()->routeIs('admin.posts.*') ? 'active' : '' }}" href="{{ route('admin.posts.index') }}">Post</a>
+            <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">Segnalazioni</a>
             <a class="nav-link {{ request()->routeIs('admin.backups.*') ? 'active' : '' }}" href="{{ route('admin.backups.index') }}">Backup</a>
         </aside>
         <main class="content">

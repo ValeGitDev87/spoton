@@ -30,4 +30,60 @@ class ProfileApiTest extends TestCase
             ->assertJsonPath('data.user.karma', 7)
             ->assertJsonPath('data.user.auth_provider', 'email');
     }
+
+    public function test_user_can_update_public_profile_fields_only(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'original@example.com',
+            'karma' => 4,
+        ]);
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->patchJson('/api/me', [
+                'display_name' => 'Nuovo Nome',
+                'bio' => 'Una nuova bio.',
+                'avatar_color' => '#12ABEF',
+                'avatar_url' => 'https://cdn.example.test/avatar-new.jpg',
+                'email' => 'changed@example.com',
+                'karma' => 999,
+                'is_admin' => true,
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.user.display_name', 'Nuovo Nome')
+            ->assertJsonPath('data.user.bio', 'Una nuova bio.')
+            ->assertJsonPath('data.user.avatar_color', '#12ABEF')
+            ->assertJsonPath('data.user.email', 'original@example.com')
+            ->assertJsonPath('data.user.karma', 4)
+            ->assertJsonPath('data.user.is_admin', false);
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'email' => 'original@example.com',
+            'display_name' => 'Nuovo Nome',
+            'karma' => 4,
+            'is_admin' => false,
+        ]);
+    }
+
+    public function test_suspended_user_cannot_login_or_use_existing_authentication(): void
+    {
+        $user = User::factory()->create([
+            'email' => 'suspended@example.com',
+            'password' => 'password123',
+            'is_suspended' => true,
+        ]);
+
+        $this
+            ->postJson('/api/auth/login', [
+                'email' => 'suspended@example.com',
+                'password' => 'password123',
+            ])
+            ->assertForbidden();
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->getJson('/api/me')
+            ->assertForbidden();
+    }
 }

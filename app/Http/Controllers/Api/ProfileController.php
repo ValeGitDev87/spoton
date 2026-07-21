@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\SerializesUsers;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Profile\UpdateProfileRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -10,6 +12,20 @@ use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
+    use SerializesUsers;
+
+    public function update(UpdateProfileRequest $request): JsonResponse
+    {
+        $request->user()->update($request->validated());
+
+        return response()->json([
+            'message' => 'Profilo aggiornato.',
+            'data' => [
+                'user' => $this->userPayload($request->user()->refresh()),
+            ],
+        ]);
+    }
+
     public function karma(Request $request): JsonResponse
     {
         return response()->json([

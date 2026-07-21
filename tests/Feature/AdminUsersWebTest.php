@@ -27,4 +27,35 @@ class AdminUsersWebTest extends TestCase
             ->assertSee('utente@example.com')
             ->assertSee('Utente');
     }
+
+    public function test_admin_can_suspend_and_reactivate_user(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $user = User::factory()->create(['is_admin' => false]);
+
+        $this
+            ->actingAs($admin)
+            ->patch("/admin/users/{$user->id}/status", [
+                'status' => 'suspended',
+                'reason' => 'Controllo moderazione.',
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'is_suspended' => true,
+            'suspension_reason' => 'Controllo moderazione.',
+        ]);
+
+        $this
+            ->actingAs($admin)
+            ->patch("/admin/users/{$user->id}/status", ['status' => 'active'])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'is_suspended' => false,
+            'suspension_reason' => null,
+        ]);
+    }
 }
