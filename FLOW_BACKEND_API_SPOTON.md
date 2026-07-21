@@ -532,9 +532,10 @@ Incluso:
 - normalizzazione dei vecchi codici icona tramite migration;
 - API luoghi arricchita con `icon`, `icon_library=ionicons` e `stories_count`;
 - frontend Expo aggiornato con feed geolocalizzato, caricamento progressivo e icone luogo nelle storie, nei post e nella scelta luogo.
+- `DemoUsersSeeder` ripetibile con cinque account `@test.it` e password comune `password123`.
 
 Verifiche locali:
 
-- `php artisan test` OK: 78 test, 358 assertion;
+- `php artisan test` OK: 79 test, 374 assertion;
 - `npx tsc --noEmit` OK;
 - `npx expo-doctor` OK: 18/18 controlli.

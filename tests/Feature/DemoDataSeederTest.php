@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use Database\Seeders\DemoDataSeeder;
+use Database\Seeders\DemoUsersSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -15,7 +16,10 @@ class DemoDataSeederTest extends TestCase
         $this->seed(DemoDataSeeder::class);
 
         $this->assertDatabaseHas('users', ['email' => 'admin@spoton.local', 'is_admin' => true]);
-        $this->assertDatabaseHas('users', ['email' => 'test@example.com', 'is_admin' => false]);
+        foreach (['luca@test.it', 'sara@test.it', 'marco@test.it', 'giulia@test.it', 'elena@test.it'] as $email) {
+            $this->assertDatabaseHas('users', ['email' => $email, 'is_admin' => false]);
+        }
+        $this->assertDatabaseCount('users', 6);
         $this->assertDatabaseCount('locations', 6);
         $this->assertDatabaseCount('posts', 18);
         $this->assertDatabaseCount('chats', 4);
@@ -27,5 +31,17 @@ class DemoDataSeederTest extends TestCase
         $this->assertDatabaseHas('comments', []);
         $this->assertDatabaseHas('challenges', []);
         $this->assertDatabaseHas('posts', ['is_anonymous' => true]);
+    }
+
+    public function test_demo_users_seeder_is_repeatable_and_creates_five_test_users(): void
+    {
+        $this->seed(DemoUsersSeeder::class);
+        $this->seed(DemoUsersSeeder::class);
+
+        foreach (array_column(DemoUsersSeeder::USERS, 'email') as $email) {
+            $this->assertDatabaseHas('users', ['email' => $email, 'is_admin' => false]);
+        }
+
+        $this->assertDatabaseCount('users', 6);
     }
 }

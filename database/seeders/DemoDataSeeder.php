@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\Chat;
 use App\Models\Challenge;
+use App\Models\Chat;
 use App\Models\Comment;
 use App\Models\Favorite;
 use App\Models\Like;
@@ -22,55 +22,16 @@ class DemoDataSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function (): void {
-            $admin = User::query()->updateOrCreate(
-                ['email' => 'admin@spoton.local'],
-                [
-                    'display_name' => 'Admin SpotOn',
-                    'password' => Hash::make('password123'),
-                    'is_admin' => true,
-                    'avatar_color' => '#111827',
-                    'auth_provider' => 'email',
-                    'karma' => 0,
-                ],
-            );
+            $this->call(DemoUsersSeeder::class);
 
-            $testUser = User::query()->updateOrCreate(
-                ['email' => 'test@example.com'],
-                [
-                    'display_name' => 'Test User',
-                    'password' => Hash::make('password123'),
-                    'is_admin' => false,
-                    'avatar_color' => '#0ea5e9',
-                    'auth_provider' => 'email',
-                    'bio' => 'Account test per provare SpotOn.',
-                    'photos' => ['https://example.test/photos/test-user-1.jpg'],
-                    'karma' => 2,
-                ],
-            );
-
-            $users = collect([$admin, $testUser]);
-
-            foreach ([
-                ['Sara Blu', 'sara.demo@spoton.local', '#ec4899'],
-                ['Marco Verdi', 'marco.demo@spoton.local', '#10b981'],
-                ['Giulia Rossa', 'giulia.demo@spoton.local', '#ef4444'],
-                ['Davide Mare', 'davide.demo@spoton.local', '#3b82f6'],
-                ['Elena Sole', 'elena.demo@spoton.local', '#f59e0b'],
-            ] as [$name, $email, $color]) {
-                $users->push(User::query()->updateOrCreate(
-                    ['email' => $email],
-                    [
-                        'display_name' => $name,
-                        'password' => Hash::make('password123'),
-                        'is_admin' => false,
-                        'avatar_color' => $color,
-                        'auth_provider' => 'email',
-                        'bio' => 'Profilo demo SpotOn.',
-                        'photos' => ["https://example.test/photos/{$email}.jpg"],
-                        'karma' => random_int(0, 8),
-                    ],
-                ));
-            }
+            $admin = User::query()->where('email', 'admin@spoton.local')->firstOrFail();
+            $testUser = User::query()->where('email', 'luca@test.it')->firstOrFail();
+            $users = User::query()
+                ->whereIn('email', [
+                    'admin@spoton.local',
+                    ...array_column(DemoUsersSeeder::USERS, 'email'),
+                ])
+                ->get();
 
             foreach ($users->where('is_admin', false) as $user) {
                 $targets = $users
