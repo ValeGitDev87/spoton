@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\User;
+use App\Services\Push\PushNotificationService;
+use App\Support\Push\PushNotificationType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -76,7 +78,7 @@ class ChatController extends Controller
         ]);
     }
 
-    public function send(Request $request, Chat $chat): JsonResponse
+    public function send(Request $request, Chat $chat, PushNotificationService $pushNotificationService): JsonResponse
     {
         abort_unless($chat->hasParticipant($request->user()->id), 403);
 
@@ -91,6 +93,22 @@ class ChatController extends Controller
         ])->load('sender');
 
         $chat->touch();
+
+        $recipient = $chat->user_one_id === $request->user()->id
+            ? $chat->userTwo
+            : $chat->userOne;
+
+        $pushNotificationService->sendToUser(
+            $recipient,
+            'Nuovo messaggio',
+            $request->user()->display_name.' ti ha scritto su SpotOn.',
+            [
+                'type' => PushNotificationType::NEW_MESSAGE,
+                'chat_id' => $chat->id,
+                'message_id' => $message->id,
+                'sender_id' => $request->user()->id,
+            ],
+        );
 
         return response()->json([
             'message' => 'OK',

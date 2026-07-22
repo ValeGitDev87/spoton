@@ -36,7 +36,7 @@ Questo file e' il riferimento operativo da aggiornare dopo ogni blocco, test loc
 
 ## Backend - Blocco 1
 
-Stato: completato localmente; attende commit/push e successiva verifica VPS con il Blocco 2.
+Stato: completato localmente; attende commit/push e verifica VPS insieme al Blocco 2.
 
 - [x] Endpoint `PATCH /api/me` per nome, bio, colore e avatar.
 - [x] Migration e modello segnalazioni post/utenti.
@@ -52,23 +52,23 @@ Stato: completato localmente; attende commit/push e successiva verifica VPS con 
 
 ## Backend - Blocco 2
 
-Stato: da iniziare dopo il Blocco 1.
+Stato: completato localmente; attende commit/push e verifica VPS.
 
-- [ ] Endpoint eliminazione account con conferma password.
-- [ ] Revoca immediata di tutti i token.
-- [ ] Anonimizzazione/cancellazione sicura dei dati collegati.
-- [ ] Retention delle coordinate e sessioni di presenza.
-- [ ] Push per nuovi messaggi chat.
-- [ ] Pagine pubbliche Privacy Policy ed Eliminazione account.
-- [ ] Test automatici Blocco 2.
-- [ ] Aggiornamento documentazione API/flow.
+- [x] Endpoint `DELETE /api/me` con password e conferma `DELETE`.
+- [x] Revoca immediata di tutti i token Sanctum e push.
+- [x] Cancellazione sicura di dati collegati, foto locali e note audio.
+- [x] Retention automatica delle coordinate e sessioni di presenza.
+- [x] Push accodata al destinatario per nuovi messaggi chat.
+- [x] Pagine pubbliche `/privacy` e `/delete-account`.
+- [x] Test automatici Blocco 2: suite completa 95 test, 462 assertion.
+- [x] Aggiornamento documentazione API/flow.
 
 ## Verifica VPS Backend
 
 Stato: da fare dopo entrambi i blocchi backend.
 
 - [ ] Commit e push eseguiti dall'utente.
-- [ ] Documento handoff ChatGPT aggiornato in `Downloads`.
+- [x] Documento handoff ChatGPT finale creato in `Downloads`.
 - [ ] Pull `main` sulla VPS.
 - [ ] Composer install e build Vite.
 - [ ] Migration in staging.
@@ -103,6 +103,9 @@ Stato: da iniziare dopo la conferma del backend sulla VPS.
 
 ## Ultima Verifica Locale Nota
 
-- Laravel: 88 test, 425 assertion.
+- Laravel: 95 test, 462 assertion.
+- Composer: configurazione valida.
+- Pint sui file modificati: OK.
+- Pint globale: restano 3 rilievi storici in file non modificati dal Blocco 2.
 - TypeScript: `npx tsc --noEmit` OK.
 - Expo Doctor SDK 54: 18/18 controlli OK.

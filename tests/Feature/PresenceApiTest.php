@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\CloseStalePresenceSessionsJob;
+use App\Jobs\PurgeLocationDataJob;
 use App\Models\Location;
 use App\Models\PresenceSession;
 use App\Models\User;
@@ -62,6 +63,51 @@ class PresenceApiTest extends TestCase
         (new CloseStalePresenceSessionsJob)->handle();
 
         $this->assertNotNull($session->refresh()->ended_at);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_location_retention_removes_only_expired_data(): void
+    {
+        Carbon::setTestNow('2026-07-21 12:00:00');
+        config()->set('spoton.privacy.location_retention_hours', 24);
+        config()->set('spoton.privacy.presence_retention_days', 30);
+
+        $expiredUser = User::factory()->create([
+            'last_known_latitude' => 40.8495,
+            'last_known_longitude' => 14.2569,
+            'last_location_update' => now()->subHours(25),
+        ]);
+        $freshUser = User::factory()->create([
+            'last_known_latitude' => 41.9028,
+            'last_known_longitude' => 12.4964,
+            'last_location_update' => now()->subHours(23),
+        ]);
+        $location = $this->location();
+        $expiredSession = PresenceSession::query()->create([
+            'user_id' => $expiredUser->id,
+            'location_id' => $location->id,
+            'started_at' => now()->subDays(40),
+            'last_ping_at' => now()->subDays(40),
+            'ended_at' => now()->subDays(31),
+        ]);
+        $freshSession = PresenceSession::query()->create([
+            'user_id' => $freshUser->id,
+            'location_id' => $location->id,
+            'started_at' => now()->subDays(20),
+            'last_ping_at' => now()->subDays(20),
+            'ended_at' => now()->subDays(20),
+        ]);
+
+        (new PurgeLocationDataJob)->handle();
+
+        $expiredUser->refresh();
+        $this->assertNull($expiredUser->last_known_latitude);
+        $this->assertNull($expiredUser->last_known_longitude);
+        $this->assertNull($expiredUser->last_location_update);
+        $this->assertNotNull($freshUser->refresh()->last_location_update);
+        $this->assertDatabaseMissing('presence_sessions', ['id' => $expiredSession->id]);
+        $this->assertDatabaseHas('presence_sessions', ['id' => $freshSession->id]);
 
         Carbon::setTestNow();
     }

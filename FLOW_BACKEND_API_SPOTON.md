@@ -577,3 +577,62 @@ PATCH /admin/users/{user}/status
 Verifiche locali:
 
 - `php artisan test` OK: 88 test, 425 assertion.
+
+---
+
+## Backend Blocco 2 - Account, Privacy E Push Chat
+
+Stato: completato localmente.
+
+Incluso:
+
+- `DELETE /api/me` con `current_password` e conferma letterale `DELETE`;
+- protezione dalla cancellazione via API degli account amministratore;
+- revoca dei token Sanctum e rimozione dei token push;
+- cancellazione definitiva di profilo, post, commenti, interazioni, challenge, chat e posizione;
+- rimozione esplicita delle segnalazioni polimorfiche dirette all'utente o ai suoi post;
+- cancellazione da storage delle foto locali e delle note audio dei post;
+- job giornaliero `PurgeLocationDataJob` alle 03:15;
+- eliminazione ultime coordinate dopo 24 ore senza aggiornamenti;
+- eliminazione sessioni presenza concluse dopo 30 giorni;
+- valori retention configurabili tramite `.env`;
+- push `new_message` accodata sulla queue `notifications` al destinatario della chat;
+- contenuto del messaggio non incluso nel testo push;
+- pagine pubbliche:
+  - `GET /privacy`;
+  - `GET /delete-account`.
+
+Richiesta eliminazione account:
+
+```http
+DELETE /api/me
+Authorization: Bearer TOKEN
+Content-Type: application/json
+
+{
+  "current_password": "password123",
+  "confirmation": "DELETE"
+}
+```
+
+Configurazione:
+
+```env
+SPOTON_PRIVACY_EMAIL=privacy@spotonapp.cloud
+SPOTON_LOCATION_RETENTION_HOURS=24
+SPOTON_PRESENCE_RETENTION_DAYS=30
+```
+
+Verifiche locali:
+
+- `composer validate --no-check-publish` OK;
+- `./vendor/bin/pint --test --dirty` OK;
+- `php artisan test` OK: 95 test, 462 assertion;
+- route API account, pagine pubbliche e scheduler verificate;
+- il test push chat conferma che viene accodato solo il token del destinatario.
+
+Nota push:
+
+- la logica backend e completa;
+- mantenere `PUSH_DRIVER=log` fino alla configurazione Firebase/APNs ed EAS;
+- il test reale su dispositivo resta intenzionalmente nell'ultimo step del progetto.

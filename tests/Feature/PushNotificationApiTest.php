@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Contracts\PushGateway;
 use App\Jobs\Push\SendExpoPushNotification;
+use App\Models\Chat;
 use App\Models\Location;
 use App\Models\Post;
 use App\Models\PushToken;
@@ -201,6 +202,39 @@ class PushNotificationApiTest extends TestCase
             ->assertCreated();
 
         Queue::assertPushedOn('notifications', SendExpoPushNotification::class);
+    }
+
+    public function test_new_chat_message_queues_push_only_for_recipient_tokens(): void
+    {
+        Queue::fake();
+
+        $sender = User::factory()->create(['display_name' => 'Luca']);
+        $recipient = User::factory()->create(['display_name' => 'Sara']);
+        $senderToken = $this->activeTokenFor($sender);
+        $recipientToken = $this->activeTokenFor($recipient);
+        [$one, $two] = Chat::sortedPair($sender->id, $recipient->id);
+        $chat = Chat::query()->create([
+            'user_one_id' => $one,
+            'user_two_id' => $two,
+        ]);
+
+        $messageId = $this
+            ->actingAs($sender, 'sanctum')
+            ->postJson("/api/chats/{$chat->id}/messages", ['text' => 'Ciao Sara'])
+            ->assertCreated()
+            ->json('data.id');
+
+        Queue::assertPushedOn('notifications', SendExpoPushNotification::class);
+        Queue::assertPushed(SendExpoPushNotification::class, function (SendExpoPushNotification $job) use ($chat, $messageId, $recipientToken, $senderToken): bool {
+            $tokenIds = (new \ReflectionProperty($job, 'pushTokenIds'))->getValue($job);
+            $data = (new \ReflectionProperty($job, 'data'))->getValue($job);
+
+            return $tokenIds === [$recipientToken->id]
+                && ! in_array($senderToken->id, $tokenIds, true)
+                && $data['type'] === 'new_message'
+                && $data['chat_id'] === $chat->id
+                && $data['message_id'] === $messageId;
+        });
     }
 
     public function test_log_gateway_logs_only_sanitized_recipient_hashes(): void

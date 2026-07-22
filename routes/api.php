@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AdminLocationController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AuthPasswordController;
@@ -30,6 +31,7 @@ Route::post('/auth/reset-password', [AuthPasswordController::class, 'reset'])->m
 Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (): void {
     Route::get('/me', [AuthController::class, 'me']);
     Route::patch('/me', [ProfileController::class, 'update']);
+    Route::delete('/me', [AccountController::class, 'destroy'])->middleware('throttle:5,1');
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/email/verification-notification', [EmailVerificationController::class, 'store'])->middleware('throttle:3,1');
     Route::patch('/auth/password', [AuthPasswordController::class, 'update'])->middleware('throttle:5,1');

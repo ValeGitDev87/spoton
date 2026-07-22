@@ -20,5 +20,7 @@ class PushNotificationType
 
     public const USER_MENTIONED = 'user_mentioned';
 
+    public const NEW_MESSAGE = 'new_message';
+
     public const TEST = 'test';
 }

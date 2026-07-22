@@ -12,6 +12,7 @@ Documento operativo per verificare email account, reset password e notifiche pus
 - Device token Expo per utente/dispositivo.
 - Driver push `log` di default, senza chiamate esterne.
 - Driver push `expo` attivabile da `.env` quando serve inviare davvero a Expo.
+- Push `new_message` accodata al destinatario quando arriva un nuovo messaggio chat.
 - Endpoint dev per inviare una push di prova, disabilitato in `production`.
 - Client test aggiornato in `public/api-client.html`.
 
@@ -137,6 +138,14 @@ POST   /api/dev/push/test
 ```
 
 `POST /api/dev/push/test` funziona solo se `APP_ENV` non e `production`.
+
+Eventi push backend attivi:
+
+- challenge e controproposte;
+- nuovi commenti e menzioni;
+- nuovi messaggi chat con payload `type=new_message`, `chat_id`, `message_id` e `sender_id`.
+
+Il testo scritto in chat non viene copiato nel corpo della notifica.
 
 ## Prove rapide API
 
