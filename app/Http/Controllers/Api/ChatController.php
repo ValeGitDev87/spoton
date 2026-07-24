@@ -63,12 +63,15 @@ class ChatController extends Controller
 
         $messages = $chat->messages()
             ->with('sender')
-            ->oldest('sent_at')
+            ->latest('sent_at')
             ->paginate((int) $request->query('per_page', 50));
 
         return response()->json([
             'message' => 'OK',
-            'data' => collect($messages->items())->map(fn (Message $message) => $this->messagePayload($message))->values(),
+            'data' => collect($messages->items())
+                ->reverse()
+                ->map(fn (Message $message) => $this->messagePayload($message))
+                ->values(),
             'meta' => [
                 'current_page' => $messages->currentPage(),
                 'last_page' => $messages->lastPage(),

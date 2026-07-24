@@ -80,4 +80,31 @@ class ChatApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.last_message.text', 'Ultimo messaggio');
     }
+
+    public function test_first_messages_page_contains_the_latest_messages_in_display_order(): void
+    {
+        $user = User::factory()->create();
+        $other = User::factory()->create();
+        [$one, $two] = Chat::sortedPair($user->id, $other->id);
+        $chat = Chat::query()->create([
+            'user_one_id' => $one,
+            'user_two_id' => $two,
+        ]);
+
+        foreach (range(1, 55) as $index) {
+            $chat->messages()->create([
+                'sender_id' => $index % 2 === 0 ? $user->id : $other->id,
+                'text' => "Messaggio {$index}",
+                'sent_at' => now()->addSeconds($index),
+            ]);
+        }
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->getJson("/api/chats/{$chat->id}/messages?per_page=50")
+            ->assertOk()
+            ->assertJsonPath('data.0.text', 'Messaggio 6')
+            ->assertJsonPath('data.49.text', 'Messaggio 55')
+            ->assertJsonPath('meta.last_page', 2);
+    }
 }

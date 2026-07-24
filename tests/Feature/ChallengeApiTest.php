@@ -38,9 +38,22 @@ class ChallengeApiTest extends TestCase
             'is_anonymous' => false,
             'spot_on_count' => 1,
         ]);
+        $this->assertDatabaseHas('post_i_was_there', [
+            'post_id' => $post->id,
+            'user_id' => $viewer->id,
+        ]);
         $this->assertDatabaseHas('chats', [
             'origin_post_id' => $post->id,
         ]);
+
+        $this
+            ->actingAs($viewer, 'sanctum')
+            ->postJson("/api/posts/{$post->id}/verify-answer", ['answer' => 'blu'])
+            ->assertOk()
+            ->assertJsonPath('data.spot_on_count', 1)
+            ->assertJsonPath('data.karma', 1);
+
+        $this->assertDatabaseCount('post_i_was_there', 1);
     }
 
     public function test_classic_wrong_answer_does_not_unlock(): void
@@ -169,6 +182,32 @@ class ChallengeApiTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_direct_inverted_challenge_persists_presence_without_duplicate_counts(): void
+    {
+        $owner = User::factory()->create();
+        $challenger = User::factory()->create();
+        $post = $this->makePost($owner);
+
+        foreach (range(1, 2) as $attempt) {
+            $this
+                ->actingAs($challenger, 'sanctum')
+                ->postJson('/api/challenges', [
+                    'post_id' => $post->id,
+                    'target_type' => 'post_author',
+                    'mode' => 'direct',
+                ])
+                ->assertCreated()
+                ->assertJsonPath('data.direct', true);
+        }
+
+        $this->assertDatabaseCount('post_i_was_there', 1);
+        $this->assertDatabaseHas('posts', [
+            'id' => $post->id,
+            'spot_on_count' => 1,
+            'io_cero_count' => 1,
+        ]);
+    }
+
     public function test_pending_returns_challenges_to_target_and_counter_reviewer(): void
     {
         $owner = User::factory()->create();
@@ -203,7 +242,8 @@ class ChallengeApiTest extends TestCase
             ->actingAs($target, 'sanctum')
             ->getJson('/api/challenges/pending')
             ->assertOk()
-            ->assertJsonPath('data.0.id', $pendingChallengeId);
+            ->assertJsonPath('data.0.id', $pendingChallengeId)
+            ->assertJsonPath('data.0.post.location.name', 'Locale Challenge');
 
         $this
             ->actingAs($owner, 'sanctum')

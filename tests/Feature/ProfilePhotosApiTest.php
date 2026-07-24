@@ -49,4 +49,22 @@ class ProfilePhotosApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['photo']);
     }
+
+    public function test_deleting_the_active_avatar_photo_clears_avatar_url(): void
+    {
+        $user = User::factory()->create([
+            'avatar_url' => '/storage/profile-photos/avatar.jpg',
+            'photos' => ['/storage/profile-photos/avatar.jpg'],
+        ]);
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->deleteJson('/api/users/me/photos/0')
+            ->assertOk();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'avatar_url' => null,
+        ]);
+    }
 }

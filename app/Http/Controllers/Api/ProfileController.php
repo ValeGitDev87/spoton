@@ -81,7 +81,13 @@ class ProfileController extends Controller
         $photos = array_values($photos);
 
         $this->deleteLocalPublicPhoto($removedUrl);
-        $user->update(['photos' => $photos]);
+        $updates = ['photos' => $photos];
+
+        if ($user->avatar_url === $removedUrl) {
+            $updates['avatar_url'] = null;
+        }
+
+        $user->update($updates);
 
         return response()->json([
             'message' => 'OK',

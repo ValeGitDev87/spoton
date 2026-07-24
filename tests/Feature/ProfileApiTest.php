@@ -66,6 +66,22 @@ class ProfileApiTest extends TestCase
         ]);
     }
 
+    public function test_user_can_use_an_uploaded_local_photo_as_avatar(): void
+    {
+        $user = User::factory()->create();
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->patchJson('/api/me', [
+                'avatar_url' => '/storage/profile-photos/avatar.jpg',
+            ])
+            ->assertOk()
+            ->assertJsonPath(
+                'data.user.avatar_url',
+                '/storage/profile-photos/avatar.jpg',
+            );
+    }
+
     public function test_suspended_user_cannot_login_or_use_existing_authentication(): void
     {
         $user = User::factory()->create([

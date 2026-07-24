@@ -7,6 +7,7 @@ use App\Models\Challenge;
 use App\Models\Chat;
 use App\Models\Comment;
 use App\Models\Post;
+use App\Models\PostIWasThere;
 use App\Models\User;
 use App\Services\Push\PushNotificationService;
 use App\Support\Push\PushNotificationType;
@@ -72,7 +73,11 @@ class ChallengeController extends Controller
 
         $result = DB::transaction(function () use ($request, $post): array {
             $lockedPost = Post::query()->lockForUpdate()->findOrFail($post->id);
-            $nextCount = $lockedPost->spot_on_count + 1;
+            $presence = PostIWasThere::query()->firstOrCreate([
+                'post_id' => $lockedPost->id,
+                'user_id' => $request->user()->id,
+            ]);
+            $nextCount = $lockedPost->iWasThere()->count();
 
             $lockedPost->update([
                 'is_anonymous' => false,
@@ -80,7 +85,9 @@ class ChallengeController extends Controller
                 'io_cero_count' => $nextCount,
             ]);
 
-            $request->user()->increment('karma');
+            if ($presence->wasRecentlyCreated) {
+                $request->user()->increment('karma');
+            }
 
             $chat = $this->createOrReuseChat($lockedPost->author_id, $request->user()->id, [
                 'origin_post_id' => $lockedPost->id,
@@ -131,8 +138,15 @@ class ChallengeController extends Controller
         if ($mode === 'direct') {
             $chat = DB::transaction(function () use ($request, $post, $targetUserId, $data): Chat {
                 if ($data['target_type'] === Challenge::TARGET_POST_AUTHOR) {
-                    $post->increment('spot_on_count');
-                    $post->increment('io_cero_count');
+                    PostIWasThere::query()->firstOrCreate([
+                        'post_id' => $post->id,
+                        'user_id' => $request->user()->id,
+                    ]);
+                    $nextCount = $post->iWasThere()->count();
+                    $post->update([
+                        'spot_on_count' => $nextCount,
+                        'io_cero_count' => $nextCount,
+                    ]);
                 }
 
                 return $this->createOrReuseChat($targetUserId, $request->user()->id, [
@@ -456,6 +470,19 @@ class ChallengeController extends Controller
             'status' => $challenge->status,
             'counter_text' => $challenge->counter_text,
             'counter_proposer' => $challenge->counterProposer ? $this->publicUserPayload($challenge->counterProposer) : null,
+            'post' => [
+                'id' => $challenge->post->id,
+                'text' => $challenge->post->text,
+                'location' => [
+                    'id' => $challenge->post->location->id,
+                    'name' => $challenge->post->location->name,
+                    'short' => $challenge->post->location->short,
+                    'city' => $challenge->post->location->city,
+                    'type' => $challenge->post->location->type,
+                    'icon' => $challenge->post->location->icon,
+                    'icon_library' => $challenge->post->location->icon_library,
+                ],
+            ],
             'resolved_at' => $challenge->resolved_at?->toISOString(),
             'created_at' => $challenge->created_at?->toISOString(),
         ];
