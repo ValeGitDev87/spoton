@@ -79,7 +79,7 @@ Stato: da fare dopo entrambi i blocchi backend.
 
 ## Frontend Expo
 
-Stato: sviluppo in corso. Step frontend 1-4 completati localmente.
+Stato: implementazione completata localmente. Restano collaudo manuale su development build e rifiniture emerse dai test reali.
 
 - [x] Struttura frontend separata in navigazione, schermate, componenti e stato feed.
 - [x] Navigazione tab nativa con safe area universale.
@@ -110,6 +110,11 @@ Stato: sviluppo in corso. Step frontend 1-4 completati localmente.
 - [x] Cache offline leggera per sessione, feed, luoghi, conversazioni e richieste.
 - [x] Banner offline, retry, timeout API e messaggi di errore uniformi.
 - [x] Pulizia cache al logout, account eliminato o sessione rifiutata.
+- [x] Development client installato per provare moduli nativi e push senza Expo Go.
+- [x] Consenso notifiche richiesto solo dalle impostazioni, senza popup automatico.
+- [x] Expo Push Token registrato per account e dispositivo sulle API server.
+- [x] Token push revocato alla disattivazione e prima del logout.
+- [x] Tap push instradato a Home, richieste/challenge o thread chat.
 - [ ] Test completi su development build.
 
 ## Notifiche - Ultimo Step
@@ -117,7 +122,10 @@ Stato: sviluppo in corso. Step frontend 1-4 completati localmente.
 - [x] Pacchetto e plugin client `expo-notifications` presenti.
 - [x] File Android `google-services.json` collegato in `app.json`.
 - [x] Package/bundle `it.spotonapp.app` ed EAS projectId preservati.
-- [ ] Registrazione Expo Push Token e apertura destinazione interna.
+- [x] Registrazione Expo Push Token e apertura destinazione interna.
+- [x] Gestione foreground, avvio da app chiusa, badge e canale Android.
+- [x] Interruttore notifiche nel profilo con stato autorizzazione.
+- [x] Rimozione token push al logout e disattivazione manuale.
 - [x] Configurazione Firebase Android presente nel frontend.
 - [ ] Configurazione credenziali FCM V1 in EAS.
 - [ ] Configurazione APNs tramite EAS/Apple Developer.
@@ -133,8 +141,10 @@ Stato: sviluppo in corso. Step frontend 1-4 completati localmente.
 - Pint globale: restano 3 rilievi storici in file non modificati dal Blocco 2.
 - TypeScript: `npx tsc --noEmit` OK.
 - Expo Doctor SDK 54: 18/18 controlli OK.
-- Expo export iOS, Android e web dopo Step 3/4: OK.
+- Expo export iOS, Android e web dopo lo step finale: OK.
 - Configurazione protetta verificata: package/bundle, EAS projectId, Firebase e plugin notifiche invariati.
+- `expo-dev-client` installato; nessuna build cloud avviata e nessuna credenziale EAS modificata.
+- `npm audit` segnala dipendenze transitive Expo/PostCSS; il fix automatico richiede l'upgrade breaking a SDK 57 e va valutato in un blocco separato.
 - API server reale: login demo e lista luoghi OK.
 - Storie attive presenti sul server durante l'ultima prova: 0; serve un post recente per la prova visiva.
 
@@ -191,3 +201,22 @@ Stato: sviluppo in corso. Step frontend 1-4 completati localmente.
 - [ ] Provare un timeout o server irraggiungibile verificando la scomparsa dello spinner entro 20 secondi.
 - [ ] Con un utente non admin, provare eliminazione con password errata e conferma diversa da `DELETE`.
 - [ ] Eliminare un account demo e verificare ritorno al login e assenza di dati cache del vecchio account.
+
+## Prova Frontend Step 9 E 10
+
+- [ ] Creare una development build Android o iOS; le push remote non si provano con Expo Go.
+- [ ] Accedere come `luca@test.it`, aprire Profilo > Impostazioni e attivare le notifiche.
+- [ ] Verificare sul server un solo token attivo per account/dispositivo senza stampare il token completo.
+- [ ] Chiudere e riaprire l'app verificando che lo stato notifiche resti attivo.
+- [ ] Inviare una push test e provarla con app in primo piano, background e chiusa.
+- [ ] Toccare una push commento/menzione e verificare l'apertura di Home.
+- [ ] Toccare una push challenge/controproposta e verificare l'apertura di Messaggi.
+- [ ] Toccare una push `new_message` e verificare l'apertura del thread corretto.
+- [ ] Disattivare le notifiche dal profilo e verificare la revoca server.
+- [ ] Riattivarle e verificare che il token torni attivo senza duplicati.
+- [ ] Eseguire logout, accedere con un secondo utente sullo stesso dispositivo e verificare che le push arrivino solo al nuovo account.
+- [ ] Negare il permesso di sistema, riprovare dall'app e verificare l'apertura delle impostazioni del dispositivo.
+- [ ] Verificare Android con canale `default`, suono, badge e tap.
+- [ ] Verificare iOS con APNs configurato da EAS, suono, badge e tap.
+- [ ] Provare tutte le schermate principali con tastiera normale, emoji e dettatura su iOS/Android.
+- [ ] Provare scroll, safe area e pulsanti su almeno un telefono piccolo e uno grande.
