@@ -64,12 +64,12 @@
 <div class="grid3">
     <div class="field">
         <label for="latitude">Latitudine</label>
-        <input id="latitude" name="latitude" type="number" step="0.0000001" min="-90" max="90" value="{{ old('latitude', $location->latitude) }}" required>
+        <input id="latitude" name="latitude" type="text" inputmode="decimal" maxlength="20" value="{{ old('latitude', $location->latitude) }}" required>
     </div>
 
     <div class="field">
         <label for="longitude">Longitudine</label>
-        <input id="longitude" name="longitude" type="number" step="0.0000001" min="-180" max="180" value="{{ old('longitude', $location->longitude) }}" required>
+        <input id="longitude" name="longitude" type="text" inputmode="decimal" maxlength="20" value="{{ old('longitude', $location->longitude) }}" required>
     </div>
 
     <div class="field">

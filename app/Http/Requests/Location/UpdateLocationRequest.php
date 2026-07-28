@@ -13,6 +13,19 @@ class UpdateLocationRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $coordinates = [];
+
+        foreach (['latitude', 'longitude'] as $field) {
+            if ($this->exists($field)) {
+                $coordinates[$field] = $this->normalizeCoordinate($this->input($field));
+            }
+        }
+
+        $this->merge($coordinates);
+    }
+
     public function rules(): array
     {
         return [
@@ -26,5 +39,12 @@ class UpdateLocationRequest extends FormRequest
             'icon' => ['sometimes', 'required', 'string', Rule::in(LocationIcon::codes())],
             'is_active' => ['sometimes', 'boolean'],
         ];
+    }
+
+    private function normalizeCoordinate(mixed $value): mixed
+    {
+        return is_string($value)
+            ? str_replace(',', '.', trim($value))
+            : $value;
     }
 }

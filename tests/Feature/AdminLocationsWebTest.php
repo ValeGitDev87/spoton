@@ -82,6 +82,34 @@ class AdminLocationsWebTest extends TestCase
         ]);
     }
 
+    public function test_admin_can_create_location_with_localized_coordinates(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this
+            ->actingAs($admin)
+            ->post('/admin/locations', [
+                'name' => 'Coordinate Test',
+                'short' => 'Coordinate',
+                'city' => 'Napoli',
+                'type' => 'altro',
+                'latitude' => '40,844731590784626',
+                'longitude' => '14,230591153008346',
+                'geo_radius_meters' => 100,
+                'icon' => 'location-outline',
+                'is_active' => '1',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/admin/locations');
+
+        $location = Location::query()
+            ->where('name', 'Coordinate Test')
+            ->firstOrFail();
+
+        $this->assertSame('40.8447316', $location->latitude);
+        $this->assertSame('14.2305912', $location->longitude);
+    }
+
     public function test_admin_can_update_location_coordinates_from_web_form(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

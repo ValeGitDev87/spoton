@@ -13,6 +13,14 @@ class StoreLocationRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        $this->merge([
+            'latitude' => $this->normalizeCoordinate($this->input('latitude')),
+            'longitude' => $this->normalizeCoordinate($this->input('longitude')),
+        ]);
+    }
+
     public function rules(): array
     {
         return [
@@ -26,5 +34,12 @@ class StoreLocationRequest extends FormRequest
             'icon' => ['required', 'string', Rule::in(LocationIcon::codes())],
             'is_active' => ['sometimes', 'boolean'],
         ];
+    }
+
+    private function normalizeCoordinate(mixed $value): mixed
+    {
+        return is_string($value)
+            ? str_replace(',', '.', trim($value))
+            : $value;
     }
 }
