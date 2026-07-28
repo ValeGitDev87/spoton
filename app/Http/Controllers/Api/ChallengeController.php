@@ -35,7 +35,8 @@ class ChallengeController extends Controller
                             $reviewer
                                 ->where(fn (Builder $classic) => $classic
                                     ->where('origin', Challenge::ORIGIN_CLASSIC)
-                                    ->where('target_user_id', $request->user()->id))
+                                    ->whereHas('post', fn (Builder $post) => $post
+                                        ->where('author_id', $request->user()->id)))
                                 ->orWhere(fn (Builder $inverted) => $inverted
                                     ->where('origin', Challenge::ORIGIN_INVERTED)
                                     ->where('challenger_id', $request->user()->id));
@@ -307,8 +308,16 @@ class ChallengeController extends Controller
             'accepted' => ['required', 'boolean'],
         ]);
 
-        abort_unless($challenge->status === Challenge::STATUS_COUNTER_PENDING, 422);
-        abort_unless($this->canReviewCounter($request->user(), $challenge), 403);
+        abort_unless(
+            $challenge->status === Challenge::STATUS_COUNTER_PENDING,
+            422,
+            'Questa controproposta non e piu disponibile.',
+        );
+        abort_unless(
+            $this->canReviewCounter($request->user(), $challenge),
+            403,
+            "Solo l'autore della proposta puo valutarla.",
+        );
 
         if (! $data['accepted']) {
             $challenge->update([

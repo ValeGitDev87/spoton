@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Challenge;
 use Database\Seeders\DemoDataSeeder;
 use Database\Seeders\DemoUsersSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,6 +32,14 @@ class DemoDataSeederTest extends TestCase
         $this->assertDatabaseHas('comments', []);
         $this->assertDatabaseHas('challenges', []);
         $this->assertDatabaseHas('posts', ['is_anonymous' => true]);
+
+        $counterProposal = Challenge::query()
+            ->where('status', Challenge::STATUS_COUNTER_PENDING)
+            ->with('post')
+            ->sole();
+
+        $this->assertSame($counterProposal->post->author_id, $counterProposal->target_user_id);
+        $this->assertSame($counterProposal->counter_proposed_by, $counterProposal->challenger_id);
     }
 
     public function test_demo_users_seeder_is_repeatable_and_creates_five_test_users(): void

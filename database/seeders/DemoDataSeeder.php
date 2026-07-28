@@ -185,9 +185,9 @@ class DemoDataSeeder extends Seeder
             Challenge::query()->create([
                 'post_id' => $classicPost->id,
                 'origin' => Challenge::ORIGIN_CLASSIC,
-                'challenger_id' => $classicPost->author_id,
+                'challenger_id' => $counterUser->id,
                 'target_type' => Challenge::TARGET_POST_AUTHOR,
-                'target_user_id' => $counterUser->id,
+                'target_user_id' => $classicPost->author_id,
                 'question' => $classicPost->secret_question,
                 'answer_hash' => $classicPost->secret_answer_hash,
                 'status' => Challenge::STATUS_COUNTER_PENDING,

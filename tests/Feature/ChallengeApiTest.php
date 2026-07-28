@@ -228,9 +228,9 @@ class ChallengeApiTest extends TestCase
         $counterChallengeId = Challenge::query()->create([
             'post_id' => $post->id,
             'origin' => 'classic',
-            'challenger_id' => $target->id,
+            'challenger_id' => $owner->id,
             'target_type' => 'post_author',
-            'target_user_id' => $owner->id,
+            'target_user_id' => $target->id,
             'question' => 'Domanda',
             'answer_hash' => Hash::make('risposta'),
             'status' => 'counter_pending',
@@ -250,6 +250,12 @@ class ChallengeApiTest extends TestCase
             ->getJson('/api/challenges/pending')
             ->assertOk()
             ->assertJsonPath('data.0.id', $counterChallengeId);
+
+        $this
+            ->actingAs($owner, 'sanctum')
+            ->postJson("/api/challenges/{$counterChallengeId}/counter-review", ['accepted' => true])
+            ->assertOk()
+            ->assertJsonPath('data.accepted', true);
     }
 
     private function makePost(User $owner, array $overrides = []): Post
