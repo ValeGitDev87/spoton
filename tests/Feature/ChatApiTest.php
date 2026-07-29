@@ -13,21 +13,28 @@ class ChatApiTest extends TestCase
 
     public function test_user_can_open_chat_and_send_message(): void
     {
-        $user = User::factory()->create();
-        $other = User::factory()->create(['display_name' => 'Altra Persona']);
+        $user = User::factory()->create([
+            'avatar_url' => 'profile-photos/utente.jpg',
+        ]);
+        $other = User::factory()->create([
+            'display_name' => 'Altra Persona',
+            'avatar_url' => 'profile-photos/altra-persona.jpg',
+        ]);
 
         $chatId = $this
             ->actingAs($user, 'sanctum')
             ->postJson('/api/chats/open', ['user_id' => $other->id])
             ->assertCreated()
             ->assertJsonPath('data.participant.id', $other->id)
+            ->assertJsonPath('data.participant.avatar_url', 'profile-photos/altra-persona.jpg')
             ->json('data.id');
 
         $this
             ->actingAs($user, 'sanctum')
             ->postJson("/api/chats/{$chatId}/messages", ['text' => 'Ciao!'])
             ->assertCreated()
-            ->assertJsonPath('data.text', 'Ciao!');
+            ->assertJsonPath('data.text', 'Ciao!')
+            ->assertJsonPath('data.sender.avatar_url', 'profile-photos/utente.jpg');
 
         $this
             ->actingAs($other, 'sanctum')
