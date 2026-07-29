@@ -39,6 +39,8 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::delete('/me/push-tokens/{deviceId}', [PushTokenController::class, 'destroy']);
     Route::post('/dev/push/test', DevPushTestController::class)->middleware('throttle:5,1');
     Route::post('/presence/ping', [PresenceController::class, 'ping']);
+    Route::get('/users/me/stats', [ProfileController::class, 'stats']);
+    Route::get('/users/me/posts', [ProfileController::class, 'posts']);
     Route::get('/users/me/karma', [ProfileController::class, 'karma']);
     Route::post('/users/me/photos', [ProfileController::class, 'storePhoto']);
     Route::delete('/users/me/photos/{photoId}', [ProfileController::class, 'destroyPhoto']);

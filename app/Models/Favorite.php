@@ -13,6 +13,7 @@ class Favorite extends Model
 
     protected $fillable = [
         'owner_id',
+        'target_user_id',
         'target_name',
     ];
 
@@ -23,5 +24,10 @@ class Favorite extends Model
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    public function targetUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'target_user_id');
     }
 }

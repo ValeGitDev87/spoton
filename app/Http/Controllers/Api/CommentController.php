@@ -71,6 +71,7 @@ class CommentController extends Controller
         }
 
         $favorites = Favorite::query()
+            ->with('targetUser')
             ->where('owner_id', $author->id)
             ->get()
             ->sortByDesc(
@@ -78,7 +79,7 @@ class CommentController extends Controller
             );
 
         foreach ($favorites as $favorite) {
-            $targetName = trim($favorite->target_name);
+            $targetName = trim($favorite->targetUser?->display_name ?? $favorite->target_name);
             $escapedTargetName = preg_quote($targetName, '/');
 
             // Accetta punteggiatura dopo il nome e prova prima i nomi più lunghi.
@@ -88,9 +89,10 @@ class CommentController extends Controller
                 continue;
             }
 
-            $taggedUserId = User::query()
-                ->whereRaw('LOWER(display_name) = ?', [mb_strtolower($targetName)])
-                ->value('id');
+            $taggedUserId = $favorite->target_user_id
+                ?? User::query()
+                    ->whereRaw('LOWER(display_name) = ?', [mb_strtolower($targetName)])
+                    ->value('id');
 
             if ($taggedUserId) {
                 return $taggedUserId;
