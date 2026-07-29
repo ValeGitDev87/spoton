@@ -18,6 +18,9 @@ class ChatController extends Controller
     {
         $chats = Chat::query()
             ->with(['userOne', 'userTwo', 'latestMessage.sender'])
+            ->withCount(['messages as unread_count' => fn (Builder $query) => $query
+                ->where('sender_id', '!=', $request->user()->id)
+                ->whereNull('read_at')])
             ->where(fn (Builder $query) => $query
                 ->where('user_one_id', $request->user()->id)
                 ->orWhere('user_two_id', $request->user()->id))
@@ -60,6 +63,11 @@ class ChatController extends Controller
     public function messages(Request $request, Chat $chat): JsonResponse
     {
         abort_unless($chat->hasParticipant($request->user()->id), 403);
+
+        $chat->messages()
+            ->where('sender_id', '!=', $request->user()->id)
+            ->whereNull('read_at')
+            ->update(['read_at' => now()]);
 
         $messages = $chat->messages()
             ->with('sender')
@@ -136,6 +144,7 @@ class ChatController extends Controller
             'last_message' => $lastMessage ? $this->messagePayload($lastMessage) : null,
             'origin_challenge_id' => $chat->origin_challenge_id,
             'origin_post_id' => $chat->origin_post_id,
+            'unread_count' => (int) ($chat->unread_count ?? 0),
             'created_at' => $chat->created_at?->toISOString(),
             'updated_at' => $chat->updated_at?->toISOString(),
         ];

@@ -36,11 +36,28 @@ class ChatApiTest extends TestCase
             ->assertJsonPath('data.text', 'Ciao!')
             ->assertJsonPath('data.sender.avatar_url', 'profile-photos/utente.jpg');
 
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $other->id,
+            'type' => 'new_message',
+        ]);
+
+        $this
+            ->actingAs($other, 'sanctum')
+            ->getJson('/api/chats')
+            ->assertOk()
+            ->assertJsonPath('data.0.unread_count', 1);
+
         $this
             ->actingAs($other, 'sanctum')
             ->getJson("/api/chats/{$chatId}/messages")
             ->assertOk()
             ->assertJsonPath('data.0.text', 'Ciao!');
+
+        $this
+            ->actingAs($other, 'sanctum')
+            ->getJson('/api/chats')
+            ->assertOk()
+            ->assertJsonPath('data.0.unread_count', 0);
     }
 
     public function test_non_participant_cannot_read_messages(): void

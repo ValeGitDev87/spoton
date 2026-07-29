@@ -3,7 +3,9 @@
 namespace App\Services\Push;
 
 use App\Jobs\Push\SendExpoPushNotification;
+use App\Models\UserNotification;
 use App\Models\User;
+use App\Support\Push\PushNotificationType;
 
 class PushNotificationService
 {
@@ -12,6 +14,16 @@ class PushNotificationService
      */
     public function sendToUser(User $user, string $title, string $body, array $data = []): int
     {
+        if (($data['type'] ?? null) !== PushNotificationType::TEST) {
+            UserNotification::query()->create([
+                'user_id' => $user->id,
+                'type' => (string) ($data['type'] ?? 'general'),
+                'title' => $title,
+                'body' => $body,
+                'data' => $data,
+            ]);
+        }
+
         $tokenIds = $user->pushTokens()
             ->where('is_active', true)
             ->pluck('id')

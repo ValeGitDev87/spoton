@@ -116,6 +116,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return $this->hasMany(PushToken::class);
     }
 
+    public function appNotifications(): HasMany
+    {
+        return $this->hasMany(UserNotification::class);
+    }
+
     public function reportsMade(): HasMany
     {
         return $this->hasMany(Report::class, 'reporter_id');

@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\StoryController;
+use App\Http\Controllers\Api\UserNotificationController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureNotSuspended;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,10 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::patch('/auth/password', [AuthPasswordController::class, 'update'])->middleware('throttle:5,1');
     Route::put('/me/push-tokens/{deviceId}', [PushTokenController::class, 'upsert']);
     Route::delete('/me/push-tokens/{deviceId}', [PushTokenController::class, 'destroy']);
+    Route::get('/notifications', [UserNotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [UserNotificationController::class, 'unreadCount']);
+    Route::patch('/notifications/read-all', [UserNotificationController::class, 'markAllRead']);
+    Route::patch('/notifications/{notification}/read', [UserNotificationController::class, 'markRead']);
     Route::post('/dev/push/test', DevPushTestController::class)->middleware('throttle:5,1');
     Route::post('/presence/ping', [PresenceController::class, 'ping']);
     Route::get('/users/me/stats', [ProfileController::class, 'stats']);

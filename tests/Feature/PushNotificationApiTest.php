@@ -11,6 +11,7 @@ use App\Models\PushToken;
 use App\Models\User;
 use App\Services\Push\ExpoPushGateway;
 use App\Services\Push\LogPushGateway;
+use App\Support\Push\PushNotificationType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -20,6 +21,30 @@ use Tests\TestCase;
 class PushNotificationApiTest extends TestCase
 {
     use RefreshDatabase;
+
+    public function test_event_is_persisted_even_without_a_push_token(): void
+    {
+        Queue::fake();
+        $user = User::factory()->create();
+
+        $recipients = app(\App\Services\Push\PushNotificationService::class)->sendToUser(
+            $user,
+            'Nuovo commento',
+            'Hai ricevuto un commento.',
+            [
+                'type' => PushNotificationType::NEW_COMMENT,
+                'post_id' => fake()->uuid(),
+            ],
+        );
+
+        $this->assertSame(0, $recipients);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $user->id,
+            'type' => PushNotificationType::NEW_COMMENT,
+            'title' => 'Nuovo commento',
+        ]);
+        Queue::assertNothingPushed();
+    }
 
     public function test_authenticated_user_can_upsert_and_revoke_push_token_by_device(): void
     {
@@ -173,6 +198,10 @@ class PushNotificationApiTest extends TestCase
             ->assertCreated();
 
         Queue::assertPushedOn('notifications', SendExpoPushNotification::class);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $target->id,
+            'type' => PushNotificationType::USER_MENTIONED,
+        ]);
     }
 
     public function test_inverted_challenge_queues_push_to_target_user(): void
