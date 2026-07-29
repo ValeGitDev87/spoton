@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Api\Concerns\SerializesPosts;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Post\FeedPostsRequest;
 use App\Http\Requests\Post\NearbyPostsRequest;
 use App\Http\Requests\Post\StorePostRequest;
 use App\Http\Requests\Post\UpdatePostRequest;
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Hash;
 class PostController extends Controller
 {
     use SerializesPosts;
+
+    private const NEAREST_PRIORITY_COUNT = 10;
 
     public function index(Request $request): JsonResponse
     {
@@ -86,6 +89,90 @@ class PostController extends Controller
                 'last_page' => $lastPage,
                 'per_page' => $perPage,
                 'total' => $allPosts->count(),
+            ],
+        ]);
+    }
+
+    public function feed(FeedPostsRequest $request): JsonResponse
+    {
+        $hasCoordinates = $request->filled('lat') && $request->filled('lng');
+        $lat = $hasCoordinates ? (float) $request->validated('lat') : null;
+        $lng = $hasCoordinates ? (float) $request->validated('lng') : null;
+        $page = (int) ($request->validated('page') ?? 1);
+        $perPage = (int) ($request->validated('per_page') ?? 30);
+
+        $posts = Post::query()
+            ->with(['author', 'location'])
+            ->where('status', 'active')
+            ->where('expires_at', '>', Carbon::now())
+            ->whereHas('location', fn (Builder $query) => $query->where('is_active', true))
+            ->latest()
+            ->get()
+            ->map(function (Post $post) use ($lat, $lng): array {
+                $distanceKm = $lat !== null && $lng !== null
+                    ? GeoDistance::kilometers(
+                        $lat,
+                        $lng,
+                        (float) $post->location->latitude,
+                        (float) $post->location->longitude,
+                    )
+                    : null;
+
+                return [
+                    'post' => $post,
+                    'distance_km' => $distanceKm,
+                ];
+            });
+
+        if ($hasCoordinates) {
+            $nearest = $posts
+                ->sort(fn (array $left, array $right) =>
+                    $left['distance_km'] <=> $right['distance_km']
+                    ?: $right['post']->created_at->getTimestamp()
+                        <=> $left['post']->created_at->getTimestamp())
+                ->take(self::NEAREST_PRIORITY_COUNT)
+                ->values();
+            $nearestIds = $nearest
+                ->map(fn (array $item) => $item['post']->id)
+                ->all();
+            $remaining = $posts
+                ->reject(fn (array $item) => in_array($item['post']->id, $nearestIds, true))
+                ->sortByDesc(fn (array $item) => $item['post']->created_at->getTimestamp())
+                ->values();
+            $posts = $nearest->concat($remaining)->values();
+        } else {
+            $posts = $posts
+                ->sortByDesc(fn (array $item) => $item['post']->created_at->getTimestamp())
+                ->values();
+        }
+
+        $pagePosts = $posts
+            ->forPage($page, $perPage)
+            ->map(fn (array $item) => $this->postPayload(
+                $item['post'],
+                $request->user(),
+                $item['distance_km'],
+            ))
+            ->values();
+        $lastPage = max(1, (int) ceil($posts->count() / $perPage));
+
+        return response()->json([
+            'message' => 'OK',
+            'data' => [
+                'origin' => $hasCoordinates ? [
+                    'lat' => $lat,
+                    'lng' => $lng,
+                ] : null,
+                'nearest_priority_count' => $hasCoordinates
+                    ? min(self::NEAREST_PRIORITY_COUNT, $posts->count())
+                    : 0,
+                'posts' => $pagePosts,
+            ],
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => $lastPage,
+                'per_page' => $perPage,
+                'total' => $posts->count(),
             ],
         ]);
     }

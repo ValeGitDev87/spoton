@@ -61,10 +61,12 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::post('/challenges/{challenge}/counter-review', [ChallengeController::class, 'counterReview'])->middleware('throttle:counterproposals');
 
     Route::get('/locations', [LocationController::class, 'index']);
+    Route::get('/locations/story-feed', [LocationController::class, 'storyFeed']);
     Route::get('/locations/nearby', [LocationController::class, 'nearby']);
     Route::get('/locations/{location}/stories', [StoryController::class, 'index']);
     Route::get('/map', MapController::class);
 
+    Route::get('/posts/feed', [PostController::class, 'feed']);
     Route::get('/posts/nearby', [PostController::class, 'nearby']);
     Route::post('/posts/{post}/like', [PostEngagementController::class, 'toggleLike'])->middleware('throttle:engagements');
     Route::post('/posts/{post}/io-cero', [PostEngagementController::class, 'toggleIoCero'])->middleware('throttle:engagements');
