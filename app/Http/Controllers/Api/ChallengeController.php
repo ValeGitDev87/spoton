@@ -9,6 +9,7 @@ use App\Models\Comment;
 use App\Models\Post;
 use App\Models\PostIWasThere;
 use App\Models\User;
+use App\Services\Chat\ConversationService;
 use App\Services\Push\PushNotificationService;
 use App\Support\Push\PushNotificationType;
 use Illuminate\Database\Eloquent\Builder;
@@ -20,6 +21,8 @@ use Illuminate\Validation\ValidationException;
 
 class ChallengeController extends Controller
 {
+    public function __construct(private readonly ConversationService $conversations) {}
+
     public function pending(Request $request): JsonResponse
     {
         $challenges = Challenge::query()
@@ -81,7 +84,6 @@ class ChallengeController extends Controller
             $nextCount = $lockedPost->iWasThere()->count();
 
             $lockedPost->update([
-                'is_anonymous' => false,
                 'spot_on_count' => $nextCount,
                 'io_cero_count' => $nextCount,
             ]);
@@ -90,9 +92,12 @@ class ChallengeController extends Controller
                 $request->user()->increment('karma');
             }
 
-            $chat = $this->createOrReuseChat($lockedPost->author_id, $request->user()->id, [
-                'origin_post_id' => $lockedPost->id,
-            ]);
+            $chat = $this->conversations->openForPost(
+                $lockedPost,
+                $lockedPost->author_id,
+                $request->user()->id,
+                ['origin_post_id' => $lockedPost->id],
+            );
 
             return [
                 'post' => $lockedPost->refresh(),
@@ -150,9 +155,12 @@ class ChallengeController extends Controller
                     ]);
                 }
 
-                return $this->createOrReuseChat($targetUserId, $request->user()->id, [
-                    'origin_post_id' => $post->id,
-                ]);
+                return $this->conversations->openForPost(
+                    $post,
+                    $targetUserId,
+                    $request->user()->id,
+                    ['origin_post_id' => $post->id],
+                );
             });
 
             return response()->json([
@@ -208,7 +216,6 @@ class ChallengeController extends Controller
             if ($lockedChallenge->target_type === Challenge::TARGET_POST_AUTHOR) {
                 $nextCount = $post->spot_on_count + 1;
                 $post->update([
-                    'is_anonymous' => false,
                     'spot_on_count' => $nextCount,
                     'io_cero_count' => $nextCount,
                 ]);
@@ -221,10 +228,15 @@ class ChallengeController extends Controller
                 'resolved_at' => now(),
             ]);
 
-            $chat = $this->createOrReuseChat($lockedChallenge->target_user_id, $lockedChallenge->challenger_id, [
-                'origin_challenge_id' => $lockedChallenge->id,
-                'origin_post_id' => $lockedChallenge->post_id,
-            ]);
+            $chat = $this->conversations->openForPost(
+                $post,
+                $lockedChallenge->target_user_id,
+                $lockedChallenge->challenger_id,
+                [
+                    'origin_challenge_id' => $lockedChallenge->id,
+                    'origin_post_id' => $lockedChallenge->post_id,
+                ],
+            );
 
             return [
                 'challenge' => $lockedChallenge->refresh()->load(['post.location', 'challenger', 'targetUser', 'sourceComment.author']),
@@ -234,7 +246,12 @@ class ChallengeController extends Controller
             ];
         });
 
-        $this->sendChallengePush($result['challenge']->challenger, 'Sfida accettata', $request->user()->display_name.' ha risposto correttamente alla tua sfida.', PushNotificationType::CHALLENGE_ACCEPTED, $result['challenge']);
+        $answererName = $result['post']->is_anonymous
+            && $result['post']->author_id === $request->user()->id
+                ? 'Ghost'
+                : $request->user()->display_name;
+
+        $this->sendChallengePush($result['challenge']->challenger, 'Sfida accettata', $answererName.' ha risposto correttamente alla tua sfida.', PushNotificationType::CHALLENGE_ACCEPTED, $result['challenge']);
 
         return response()->json([
             'message' => 'OK',
@@ -344,7 +361,6 @@ class ChallengeController extends Controller
             if ($lockedChallenge->origin === Challenge::ORIGIN_CLASSIC || $lockedChallenge->target_type === Challenge::TARGET_POST_AUTHOR) {
                 $nextCount = $post->spot_on_count + 1;
                 $post->update([
-                    'is_anonymous' => false,
                     'spot_on_count' => $nextCount,
                     'io_cero_count' => $nextCount,
                 ]);
@@ -361,10 +377,15 @@ class ChallengeController extends Controller
                 'resolved_at' => now(),
             ]);
 
-            $chat = $this->createOrReuseChat($counterpartId, $request->user()->id, [
-                'origin_challenge_id' => $lockedChallenge->id,
-                'origin_post_id' => $lockedChallenge->post_id,
-            ]);
+            $chat = $this->conversations->openForPost(
+                $post,
+                $counterpartId,
+                $request->user()->id,
+                [
+                    'origin_challenge_id' => $lockedChallenge->id,
+                    'origin_post_id' => $lockedChallenge->post_id,
+                ],
+            );
 
             return [
                 'challenge' => $lockedChallenge->refresh()->load(['post.location', 'challenger', 'targetUser', 'counterProposer']),
@@ -442,20 +463,6 @@ class ChallengeController extends Controller
                 'post_id' => $challenge->post_id,
             ],
         );
-    }
-
-    private function createOrReuseChat(string $firstUserId, string $secondUserId, array $origin = []): Chat
-    {
-        [$one, $two] = Chat::sortedPair($firstUserId, $secondUserId);
-
-        $chat = Chat::query()->firstOrCreate([
-            'user_one_id' => $one,
-            'user_two_id' => $two,
-        ]);
-
-        $chat->fill(array_filter($origin))->save();
-
-        return $chat->refresh();
     }
 
     private function normalizeAnswer(string $answer): string

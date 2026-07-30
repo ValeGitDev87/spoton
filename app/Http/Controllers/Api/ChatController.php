@@ -5,15 +5,19 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Chat;
 use App\Models\Message;
-use App\Models\User;
+use App\Models\Post;
+use App\Services\Chat\ConversationService;
 use App\Services\Push\PushNotificationService;
 use App\Support\Push\PushNotificationType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
+    public function __construct(private readonly ConversationService $conversations) {}
+
     public function index(Request $request): JsonResponse
     {
         $chats = Chat::query()
@@ -29,7 +33,7 @@ class ChatController extends Controller
 
         return response()->json([
             'message' => 'OK',
-            'data' => collect($chats->items())->map(fn (Chat $chat) => $this->chatPayload($chat, $request->user()))->values(),
+            'data' => collect($chats->items())->map(fn (Chat $chat) => $this->conversations->chatPayload($chat, $request->user()))->values(),
             'meta' => [
                 'current_page' => $chats->currentPage(),
                 'last_page' => $chats->lastPage(),
@@ -43,20 +47,31 @@ class ChatController extends Controller
     {
         $data = $request->validate([
             'user_id' => ['required', 'uuid', 'exists:users,id'],
+            'post_id' => ['nullable', 'uuid', 'exists:posts,id'],
         ]);
 
         abort_if($data['user_id'] === $request->user()->id, 422, 'Non puoi aprire una chat con te stesso.');
 
-        [$one, $two] = Chat::sortedPair($request->user()->id, $data['user_id']);
+        $post = isset($data['post_id']) ? Post::query()->findOrFail($data['post_id']) : null;
 
-        $chat = Chat::query()->firstOrCreate([
-            'user_one_id' => $one,
-            'user_two_id' => $two,
-        ])->load(['userOne', 'userTwo', 'latestMessage.sender']);
+        if ($post) {
+            abort_unless($post->author_id === $data['user_id'], 422, 'Il post non appartiene all\'utente indicato.');
+        }
+
+        $chat = $post
+            ? $this->conversations->openForPost(
+                $post,
+                $request->user()->id,
+                $data['user_id'],
+                ['origin_post_id' => $post->id],
+            )
+            : $this->conversations->openDirect($request->user()->id, $data['user_id']);
+
+        $chat->load(['userOne', 'userTwo', 'latestMessage.sender']);
 
         return response()->json([
             'message' => 'OK',
-            'data' => $this->chatPayload($chat, $request->user()),
+            'data' => $this->conversations->chatPayload($chat, $request->user()),
         ], 201);
     }
 
@@ -78,7 +93,7 @@ class ChatController extends Controller
             'message' => 'OK',
             'data' => collect($messages->items())
                 ->reverse()
-                ->map(fn (Message $message) => $this->messagePayload($message))
+                ->map(fn (Message $message) => $this->conversations->messagePayload($message, $request->user(), $chat))
                 ->values(),
             'meta' => [
                 'current_page' => $messages->currentPage(),
@@ -108,64 +123,67 @@ class ChatController extends Controller
         $recipient = $chat->user_one_id === $request->user()->id
             ? $chat->userTwo
             : $chat->userOne;
+        $maskedGhostSender = $chat->shouldMaskIdentityOf($request->user()->id, $recipient);
+        $pushData = [
+            'type' => PushNotificationType::NEW_MESSAGE,
+            'chat_id' => $chat->id,
+            'message_id' => $message->id,
+        ];
+
+        if (! $maskedGhostSender) {
+            $pushData['sender_id'] = $request->user()->id;
+        }
 
         $pushNotificationService->sendToUser(
             $recipient,
             'Nuovo messaggio',
-            $request->user()->display_name.' ti ha scritto su SpotOn.',
-            [
-                'type' => PushNotificationType::NEW_MESSAGE,
-                'chat_id' => $chat->id,
-                'message_id' => $message->id,
-                'sender_id' => $request->user()->id,
-            ],
+            ($maskedGhostSender ? 'Ghost' : $request->user()->display_name).' ti ha scritto su SpotOn.',
+            $pushData,
         );
 
         return response()->json([
             'message' => 'OK',
-            'data' => $this->messagePayload($message),
+            'data' => $this->conversations->messagePayload($message, $request->user(), $chat),
         ], 201);
     }
 
-    private function chatPayload(Chat $chat, User $viewer): array
+    public function revealIdentity(Request $request, Chat $chat, PushNotificationService $pushNotificationService): JsonResponse
     {
-        $chat->loadMissing(['userOne', 'userTwo', 'latestMessage.sender']);
-        $other = $chat->user_one_id === $viewer->id ? $chat->userTwo : $chat->userOne;
-        $lastMessage = $chat->latestMessage;
+        abort_unless($chat->hasParticipant($request->user()->id), 403);
+        abort_unless($chat->isGhost(), 422, 'Questa chat non e Ghost.');
+        abort_unless($chat->ghost_owner_id === $request->user()->id, 403);
 
-        return [
-            'id' => $chat->id,
-            'participant' => [
-                'id' => $other->id,
-                'display_name' => $other->display_name,
-                'avatar_color' => $other->avatar_color,
-                'avatar_url' => $other->avatar_url,
-            ],
-            'last_message' => $lastMessage ? $this->messagePayload($lastMessage) : null,
-            'origin_challenge_id' => $chat->origin_challenge_id,
-            'origin_post_id' => $chat->origin_post_id,
-            'unread_count' => (int) ($chat->unread_count ?? 0),
-            'created_at' => $chat->created_at?->toISOString(),
-            'updated_at' => $chat->updated_at?->toISOString(),
-        ];
-    }
+        $revealedNow = false;
+        $chat = DB::transaction(function () use ($chat, &$revealedNow): Chat {
+            $lockedChat = Chat::query()->lockForUpdate()->findOrFail($chat->id);
 
-    private function messagePayload(Message $message): array
-    {
-        $message->loadMissing('sender');
+            if ($lockedChat->ghost_identity_revealed_at === null) {
+                $lockedChat->update(['ghost_identity_revealed_at' => now()]);
+                $revealedNow = true;
+            }
 
-        return [
-            'id' => $message->id,
-            'chat_id' => $message->chat_id,
-            'sender' => [
-                'id' => $message->sender->id,
-                'display_name' => $message->sender->display_name,
-                'avatar_color' => $message->sender->avatar_color,
-                'avatar_url' => $message->sender->avatar_url,
-            ],
-            'text' => $message->text,
-            'sent_at' => $message->sent_at?->toISOString(),
-            'read_at' => $message->read_at?->toISOString(),
-        ];
+            return $lockedChat->refresh();
+        });
+
+        if ($revealedNow) {
+            $recipient = $chat->user_one_id === $request->user()->id
+                ? $chat->userTwo
+                : $chat->userOne;
+
+            $pushNotificationService->sendToUser(
+                $recipient,
+                'Identita rivelata',
+                'Ghost ha rivelato la sua identita.',
+                [
+                    'type' => PushNotificationType::GHOST_IDENTITY_REVEALED,
+                    'chat_id' => $chat->id,
+                ],
+            );
+        }
+
+        return response()->json([
+            'message' => 'OK',
+            'data' => $this->conversations->chatPayload($chat, $request->user()),
+        ]);
     }
 }

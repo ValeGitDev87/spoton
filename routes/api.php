@@ -58,6 +58,7 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::post('/chats/open', [ChatController::class, 'open'])->middleware('throttle:messages');
     Route::get('/chats/{chat}/messages', [ChatController::class, 'messages']);
     Route::post('/chats/{chat}/messages', [ChatController::class, 'send'])->middleware('throttle:messages');
+    Route::post('/chats/{chat}/reveal-identity', [ChatController::class, 'revealIdentity'])->middleware('throttle:5,1');
 
     Route::get('/challenges/pending', [ChallengeController::class, 'pending']);
     Route::post('/challenges', [ChallengeController::class, 'store'])->middleware('throttle:challenges');

@@ -22,5 +22,7 @@ class PushNotificationType
 
     public const NEW_MESSAGE = 'new_message';
 
+    public const GHOST_IDENTITY_REVEALED = 'ghost_identity_revealed';
+
     public const TEST = 'test';
 }

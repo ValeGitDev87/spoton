@@ -9,8 +9,10 @@ use App\Models\Location;
 use App\Models\Post;
 use App\Models\PushToken;
 use App\Models\User;
+use App\Services\Chat\ConversationService;
 use App\Services\Push\ExpoPushGateway;
 use App\Services\Push\LogPushGateway;
+use App\Services\Push\PushNotificationService;
 use App\Support\Push\PushNotificationType;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -27,7 +29,7 @@ class PushNotificationApiTest extends TestCase
         Queue::fake();
         $user = User::factory()->create();
 
-        $recipients = app(\App\Services\Push\PushNotificationService::class)->sendToUser(
+        $recipients = app(PushNotificationService::class)->sendToUser(
             $user,
             'Nuovo commento',
             'Hai ricevuto un commento.',
@@ -266,6 +268,64 @@ class PushNotificationApiTest extends TestCase
         });
     }
 
+    public function test_ghost_message_push_hides_owner_until_identity_is_revealed(): void
+    {
+        Queue::fake();
+
+        $owner = User::factory()->create(['display_name' => 'Nome Segreto']);
+        $recipient = User::factory()->create();
+        $recipientToken = $this->activeTokenFor($recipient);
+        $post = $this->makePost($owner, ['is_anonymous' => true]);
+        $chat = app(ConversationService::class)->openForPost(
+            $post,
+            $owner->id,
+            $recipient->id,
+            ['origin_post_id' => $post->id],
+        );
+
+        $firstMessageId = $this
+            ->actingAs($owner, 'sanctum')
+            ->postJson("/api/chats/{$chat->id}/messages", ['text' => 'Messaggio anonimo'])
+            ->assertCreated()
+            ->json('data.id');
+
+        Queue::assertPushed(SendExpoPushNotification::class, function (SendExpoPushNotification $job) use ($chat, $firstMessageId, $recipientToken, $owner): bool {
+            $tokenIds = (new \ReflectionProperty($job, 'pushTokenIds'))->getValue($job);
+            $body = (new \ReflectionProperty($job, 'body'))->getValue($job);
+            $data = (new \ReflectionProperty($job, 'data'))->getValue($job);
+
+            return $tokenIds === [$recipientToken->id]
+                && $body === 'Ghost ti ha scritto su SpotOn.'
+                && $data === [
+                    'type' => PushNotificationType::NEW_MESSAGE,
+                    'chat_id' => $chat->id,
+                    'message_id' => $firstMessageId,
+                ]
+                && ! str_contains(json_encode($data, JSON_THROW_ON_ERROR), $owner->id);
+        });
+
+        $this
+            ->actingAs($owner, 'sanctum')
+            ->postJson("/api/chats/{$chat->id}/reveal-identity")
+            ->assertOk();
+
+        $secondMessageId = $this
+            ->actingAs($owner, 'sanctum')
+            ->postJson("/api/chats/{$chat->id}/messages", ['text' => 'Messaggio rivelato'])
+            ->assertCreated()
+            ->json('data.id');
+
+        Queue::assertPushed(SendExpoPushNotification::class, function (SendExpoPushNotification $job) use ($chat, $secondMessageId, $owner): bool {
+            $body = (new \ReflectionProperty($job, 'body'))->getValue($job);
+            $data = (new \ReflectionProperty($job, 'data'))->getValue($job);
+
+            return $body === 'Nome Segreto ti ha scritto su SpotOn.'
+                && ($data['chat_id'] ?? null) === $chat->id
+                && ($data['message_id'] ?? null) === $secondMessageId
+                && ($data['sender_id'] ?? null) === $owner->id;
+        });
+    }
+
     public function test_log_gateway_logs_only_sanitized_recipient_hashes(): void
     {
         Log::spy();
@@ -329,9 +389,9 @@ class PushNotificationApiTest extends TestCase
         ]);
     }
 
-    private function makePost(User $owner): Post
+    private function makePost(User $owner, array $overrides = []): Post
     {
-        return Post::query()->create([
+        return Post::query()->create($overrides + [
             'author_id' => $owner->id,
             'location_id' => $this->location()->id,
             'text' => 'Post push',

@@ -35,7 +35,7 @@ class ChallengeApiTest extends TestCase
 
         $this->assertDatabaseHas('posts', [
             'id' => $post->id,
-            'is_anonymous' => false,
+            'is_anonymous' => true,
             'spot_on_count' => 1,
         ]);
         $this->assertDatabaseHas('post_i_was_there', [
@@ -44,6 +44,8 @@ class ChallengeApiTest extends TestCase
         ]);
         $this->assertDatabaseHas('chats', [
             'origin_post_id' => $post->id,
+            'context_type' => 'ghost_post',
+            'ghost_owner_id' => $owner->id,
         ]);
 
         $this
@@ -157,10 +159,59 @@ class ChallengeApiTest extends TestCase
 
         $this->assertDatabaseHas('posts', [
             'id' => $post->id,
-            'is_anonymous' => false,
+            'is_anonymous' => true,
             'spot_on_count' => 1,
         ]);
+        $this->assertDatabaseHas('chats', [
+            'origin_post_id' => $post->id,
+            'context_type' => 'ghost_post',
+            'ghost_owner_id' => $owner->id,
+        ]);
         $this->assertSame(1, $viewer->fresh()->karma);
+    }
+
+    public function test_inverted_challenge_to_ghost_post_author_keeps_identity_masked(): void
+    {
+        $owner = User::factory()->create(['display_name' => 'Autore Reale']);
+        $challenger = User::factory()->create();
+        $post = $this->makePost($owner, ['is_anonymous' => true]);
+
+        $challengeId = $this
+            ->actingAs($challenger, 'sanctum')
+            ->postJson('/api/challenges', [
+                'post_id' => $post->id,
+                'target_type' => 'post_author',
+                'mode' => 'question',
+                'question' => 'Che cosa ricordi?',
+                'answer' => 'ombrello',
+            ])
+            ->assertCreated()
+            ->json('data.id');
+
+        $chatId = $this
+            ->actingAs($owner, 'sanctum')
+            ->postJson("/api/challenges/{$challengeId}/answer", ['answer' => 'Ombrello'])
+            ->assertOk()
+            ->json('data.chat_id');
+
+        $this->assertTrue($post->fresh()->is_anonymous);
+        $this->assertDatabaseHas('chats', [
+            'id' => $chatId,
+            'context_type' => 'ghost_post',
+            'ghost_owner_id' => $owner->id,
+        ]);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $challenger->id,
+            'type' => 'challenge_accepted',
+            'body' => 'Ghost ha risposto correttamente alla tua sfida.',
+        ]);
+
+        $this
+            ->actingAs($challenger, 'sanctum')
+            ->getJson('/api/chats')
+            ->assertOk()
+            ->assertJsonPath('data.0.participant.id', null)
+            ->assertJsonPath('data.0.participant.display_name', 'Ghost');
     }
 
     public function test_inverted_challenge_cannot_bypass_classic_secret_question(): void
@@ -186,10 +237,11 @@ class ChallengeApiTest extends TestCase
     {
         $owner = User::factory()->create();
         $challenger = User::factory()->create();
-        $post = $this->makePost($owner);
+        $post = $this->makePost($owner, ['is_anonymous' => true]);
+        $chatIds = [];
 
         foreach (range(1, 2) as $attempt) {
-            $this
+            $chatIds[] = $this
                 ->actingAs($challenger, 'sanctum')
                 ->postJson('/api/challenges', [
                     'post_id' => $post->id,
@@ -197,14 +249,22 @@ class ChallengeApiTest extends TestCase
                     'mode' => 'direct',
                 ])
                 ->assertCreated()
-                ->assertJsonPath('data.direct', true);
+                ->assertJsonPath('data.direct', true)
+                ->json('data.chat_id');
         }
 
+        $this->assertSame($chatIds[0], $chatIds[1]);
         $this->assertDatabaseCount('post_i_was_there', 1);
         $this->assertDatabaseHas('posts', [
             'id' => $post->id,
+            'is_anonymous' => true,
             'spot_on_count' => 1,
             'io_cero_count' => 1,
+        ]);
+        $this->assertDatabaseHas('chats', [
+            'id' => $chatIds[0],
+            'context_type' => 'ghost_post',
+            'ghost_owner_id' => $owner->id,
         ]);
     }
 
