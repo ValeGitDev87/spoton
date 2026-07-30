@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Auth;
 
+use App\Support\Mail\SpotOnAuthMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -31,11 +32,17 @@ class PasswordChangedNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('La password del tuo account SpotOn e stata modificata')
-            ->greeting('Ciao '.$notifiable->display_name)
-            ->line('La password del tuo account SpotOn e stata modificata correttamente.')
-            ->line('Se non sei stato tu, accedi subito al recupero password o contatta il supporto.')
-            ->line('Questa email non contiene password, token o dati sensibili.');
+        return SpotOnAuthMail::make(
+            subject: 'La password del tuo account SpotOn e stata modificata',
+            preheader: 'Conferma di sicurezza: la password del tuo account e stata aggiornata.',
+            eyebrow: 'Sicurezza account',
+            title: 'Password aggiornata',
+            greeting: 'Ciao '.$notifiable->display_name.',',
+            intro: 'La password del tuo account SpotOn e stata modificata correttamente.',
+            lines: ['Tutte le altre sessioni sono state disconnesse per proteggere il tuo account.'],
+            image: 'password-changed.png',
+            imageAlt: 'Illustrazione password SpotOn protetta',
+            notice: 'Se non sei stato tu, avvia subito il recupero password o contatta il supporto. Questa email non contiene password, token o dati sensibili.',
+        );
     }
 }

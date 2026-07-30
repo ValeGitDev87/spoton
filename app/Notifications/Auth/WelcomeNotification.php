@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Auth;
 
+use App\Support\Mail\SpotOnAuthMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -31,12 +32,20 @@ class WelcomeNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('Il tuo account SpotOn e attivo')
-            ->greeting('Benvenuto in SpotOn, '.$notifiable->display_name)
-            ->line('La tua email e stata verificata correttamente.')
-            ->line('Ora puoi usare SpotOn per pubblicare, riconoscere incontri reali e sbloccare conversazioni in modo sicuro.')
-            ->action('Vai su SpotOn', rtrim((string) config('app.url'), '/'))
-            ->line('Non condividere mai password, codici o dati sensibili nelle conversazioni.');
+        return SpotOnAuthMail::make(
+            subject: 'Il tuo account SpotOn e attivo',
+            preheader: 'Benvenuto in SpotOn: il tuo account e pronto.',
+            eyebrow: 'Account attivato',
+            title: 'Ora sei ufficialmente dei nostri',
+            greeting: 'Benvenuto, '.$notifiable->display_name.'!',
+            intro: 'La tua email e stata verificata correttamente. Ora puoi pubblicare, riconoscere incontri reali e sbloccare nuove conversazioni.',
+            lines: ['Esplora i luoghi, scopri cosa succede intorno a te e partecipa alla community con rispetto e curiosita.'],
+            image: 'welcome.png',
+            imageAlt: 'Benvenuto nella community SpotOn',
+            actionLabel: 'Vai su SpotOn',
+            actionUrl: rtrim((string) config('app.url'), '/'),
+            notice: 'Non condividere mai password, codici o dati sensibili nelle conversazioni.',
+            showBrand: false,
+        );
     }
 }

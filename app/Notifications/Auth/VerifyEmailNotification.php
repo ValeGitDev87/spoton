@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Auth;
 
+use App\Support\Mail\SpotOnAuthMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -35,14 +36,20 @@ class VerifyEmailNotification extends Notification implements ShouldQueue
     {
         $expiresIn = (int) config('services.spoton_auth.email_verification_expire_minutes', 60);
 
-        return (new MailMessage)
-            ->subject('Benvenuto in SpotOn - verifica la tua email')
-            ->greeting('Ciao '.$notifiable->display_name)
-            ->line('Grazie per esserti registrato a SpotOn.')
-            ->line('Conferma il tuo indirizzo email per attivare il tuo account.')
-            ->action('Verifica email', $this->verificationUrl($notifiable))
-            ->line("Il link scade tra {$expiresIn} minuti.")
-            ->line('Se non hai creato tu questo account, puoi ignorare questa email.');
+        return SpotOnAuthMail::make(
+            subject: 'Benvenuto in SpotOn - verifica la tua email',
+            preheader: 'Conferma il tuo indirizzo email e attiva il tuo account SpotOn.',
+            eyebrow: 'Un ultimo passaggio',
+            title: 'Conferma la tua email',
+            greeting: 'Ciao '.$notifiable->display_name.',',
+            intro: 'Grazie per esserti registrato a SpotOn. Conferma il tuo indirizzo email per attivare il tuo account.',
+            lines: [],
+            image: 'verify-email.png',
+            imageAlt: 'Illustrazione verifica email SpotOn',
+            actionLabel: 'Verifica email',
+            actionUrl: $this->verificationUrl($notifiable),
+            notice: "Il link scade tra {$expiresIn} minuti. Se non hai creato tu questo account, puoi ignorare questa email.",
+        );
     }
 
     private function verificationUrl(object $notifiable): string

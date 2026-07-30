@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Auth;
 
+use App\Support\Mail\SpotOnAuthMail;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -34,13 +35,20 @@ class ResetPasswordNotification extends Notification implements ShouldQueue
     {
         $expiresIn = (int) config('services.spoton_auth.password_reset_expire_minutes', 30);
 
-        return (new MailMessage)
-            ->subject('SpotOn - reimposta la password')
-            ->greeting('Ciao '.$notifiable->display_name)
-            ->line('Abbiamo ricevuto una richiesta di recupero password per il tuo account SpotOn.')
-            ->action('Reimposta password', $this->resetUrl($notifiable))
-            ->line("Il link scade tra {$expiresIn} minuti ed e utilizzabile una sola volta.")
-            ->line('Se non hai richiesto tu il recupero password, ignora questa email.');
+        return SpotOnAuthMail::make(
+            subject: 'SpotOn - reimposta la password',
+            preheader: 'Usa il link sicuro per scegliere una nuova password.',
+            eyebrow: 'Recupero account',
+            title: 'Reimposta la tua password',
+            greeting: 'Ciao '.$notifiable->display_name.',',
+            intro: 'Abbiamo ricevuto una richiesta di recupero password per il tuo account SpotOn.',
+            lines: ['Premi il pulsante qui sotto per scegliere una nuova password e tornare ad accedere al tuo account.'],
+            image: 'reset-password.png',
+            imageAlt: 'Illustrazione recupero password SpotOn',
+            actionLabel: 'Reimposta password',
+            actionUrl: $this->resetUrl($notifiable),
+            notice: "Il link scade tra {$expiresIn} minuti ed e utilizzabile una sola volta. Se non hai richiesto tu il recupero, ignora questa email.",
+        );
     }
 
     private function resetUrl(object $notifiable): string

@@ -20,10 +20,9 @@ class AuthMailApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_registration_dispatches_registered_event_and_verification_email(): void
+    public function test_registration_dispatches_registered_event(): void
     {
         Event::fake([Registered::class]);
-        Notification::fake();
 
         $this
             ->postJson('/api/auth/register', [
@@ -35,10 +34,25 @@ class AuthMailApiTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('data.user.email_verified', false);
 
-        $user = User::query()->where('email', 'vale@example.com')->firstOrFail();
-
         Event::assertDispatched(Registered::class);
-        Notification::assertSentTo($user, VerifyEmailNotification::class);
+    }
+
+    public function test_registration_sends_one_verification_email(): void
+    {
+        Notification::fake();
+
+        $this
+            ->postJson('/api/auth/register', [
+                'display_name' => 'Valentino',
+                'email' => 'mail@example.com',
+                'password' => 'password123',
+                'password_confirmation' => 'password123',
+            ])
+            ->assertCreated();
+
+        $user = User::query()->where('email', 'mail@example.com')->firstOrFail();
+
+        Notification::assertSentToTimes($user, VerifyEmailNotification::class, 1);
     }
 
     public function test_signed_email_verification_marks_user_verified_and_sends_welcome_once(): void
@@ -107,6 +121,8 @@ class AuthMailApiTest extends TestCase
 
     public function test_password_reset_changes_password_revokes_tokens_and_token_cannot_be_reused(): void
     {
+        Notification::fake();
+
         $user = User::factory()->create([
             'email' => 'change@example.com',
             'password' => Hash::make('old-password'),
@@ -126,6 +142,7 @@ class AuthMailApiTest extends TestCase
         $this->assertTrue(Hash::check('new-password123', $user->fresh()->password));
         $this->assertNotNull($user->fresh()->password_changed_at);
         $this->assertDatabaseCount('personal_access_tokens', 0);
+        Notification::assertSentTo($user, PasswordChangedNotification::class);
 
         $this
             ->postJson('/api/auth/reset-password', [
@@ -170,5 +187,35 @@ class AuthMailApiTest extends TestCase
         $this->assertDatabaseHas('personal_access_tokens', ['id' => $currentToken->accessToken->id]);
         $this->assertDatabaseMissing('personal_access_tokens', ['id' => $otherToken->accessToken->id]);
         Notification::assertSentTo($user, PasswordChangedNotification::class);
+    }
+
+    public function test_auth_emails_use_the_shared_responsive_template_and_expected_images(): void
+    {
+        $user = User::factory()->create([
+            'display_name' => 'Valentino',
+            'email' => 'vale@example.com',
+        ]);
+
+        $notifications = [
+            [new VerifyEmailNotification, 'verify-email.png', true],
+            [new WelcomeNotification, 'welcome.png', false],
+            [new ResetPasswordNotification('test-token'), 'reset-password.png', true],
+            [new PasswordChangedNotification, 'password-changed.png', true],
+        ];
+
+        foreach ($notifications as [$notification, $image, $showBrand]) {
+            $message = $notification->toMail($user);
+
+            $this->assertSame('emails.auth.notification', $message->view['html']);
+            $this->assertSame('emails.auth.notification-text', $message->view['text']);
+            $this->assertSame(asset('images/emails/'.$image), $message->viewData['imageUrl']);
+            $this->assertSame($showBrand, $message->viewData['showBrand']);
+            $this->assertFileExists(public_path('images/emails/'.$image));
+
+            $html = view($message->view['html'], $message->viewData)->render();
+
+            $this->assertStringContainsString($image, $html);
+            $this->assertStringContainsString('max-width:600px', $html);
+        }
     }
 }

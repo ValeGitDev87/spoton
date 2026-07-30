@@ -3,6 +3,7 @@
 namespace App\Services\Auth;
 
 use App\Models\User;
+use App\Notifications\Auth\PasswordChangedNotification;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
@@ -24,6 +25,7 @@ class ResetsPasswords
                 $user->tokens()->delete();
 
                 event(new PasswordReset($user));
+                $user->notify(new PasswordChangedNotification);
             },
         );
     }
