@@ -6,15 +6,22 @@ use App\Http\Controllers\Web\Admin\LocationController;
 use App\Http\Controllers\Web\Admin\PostController;
 use App\Http\Controllers\Web\Admin\ReportController;
 use App\Http\Controllers\Web\Admin\UserController;
+use App\Http\Controllers\Web\AppLinkAssociationController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\EmailVerificationController;
 use App\Http\Controllers\Web\PasswordResetController;
+use App\Http\Controllers\Web\SharedPostController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('admin.dashboard');
 });
+
+Route::get('/.well-known/apple-app-site-association', [AppLinkAssociationController::class, 'apple']);
+Route::get('/apple-app-site-association', [AppLinkAssociationController::class, 'apple']);
+Route::get('/.well-known/assetlinks.json', [AppLinkAssociationController::class, 'android']);
+Route::get('/p/{post}', SharedPostController::class)->name('posts.share');
 
 Route::view('/privacy', 'legal.privacy', [
     'contactEmail' => config('spoton.privacy.contact_email'),
