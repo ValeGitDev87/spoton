@@ -30,8 +30,10 @@ class PostController extends Controller
         $posts = Post::query()
             ->with(['author', 'location'])
             ->when(! $request->query('status'), fn (Builder $query) => $query->where('status', 'active'))
+            ->when(! $request->query('status'), fn (Builder $query) => $query->where('expires_at', '>', Carbon::now()))
             ->when($request->query('status'), fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($request->query('location_id'), fn (Builder $query, string $locationId) => $query->where('location_id', $locationId))
+            ->when($request->query('category'), fn (Builder $query, string $category) => $query->where('category', $category))
             ->when($request->query('search'), function (Builder $query, string $search): void {
                 $query->where(function (Builder $inner) use ($search): void {
                     $inner

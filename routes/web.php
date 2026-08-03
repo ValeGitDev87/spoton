@@ -42,6 +42,11 @@ Route::post('/logout', [AuthController::class, 'logout'])
 Route::get('/email/verify/{id}/{hash}', EmailVerificationController::class)
     ->middleware(['signed', 'throttle:6,1'])
     ->name('verification.verify');
+Route::view('/email-verified', 'auth.email-result', [
+    'title' => 'Email verificata',
+    'message' => 'Il tuo account SpotOn e pronto. Puoi tornare nell app.',
+    'status' => 'verified',
+])->name('verification.result');
 
 Route::get('/reset-password', [PasswordResetController::class, 'show'])
     ->middleware('guest')

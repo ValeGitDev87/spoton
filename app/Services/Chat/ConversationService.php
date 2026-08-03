@@ -68,6 +68,11 @@ class ConversationService
         $chat->loadMissing(['userOne', 'userTwo', 'latestMessage.sender']);
         $other = $chat->user_one_id === $viewer->id ? $chat->userTwo : $chat->userOne;
         $lastMessage = $chat->latestMessage;
+        $clearedAt = $chat->clearedAtFor($viewer->id);
+
+        if ($lastMessage && $clearedAt && $lastMessage->sent_at->lessThanOrEqualTo($clearedAt)) {
+            $lastMessage = null;
+        }
 
         return [
             'id' => $chat->id,

@@ -20,14 +20,35 @@ class ChatController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $userId = $request->user()->id;
         $chats = Chat::query()
             ->with(['userOne', 'userTwo', 'latestMessage.sender'])
             ->withCount(['messages as unread_count' => fn (Builder $query) => $query
-                ->where('sender_id', '!=', $request->user()->id)
-                ->whereNull('read_at')])
-            ->where(fn (Builder $query) => $query
-                ->where('user_one_id', $request->user()->id)
-                ->orWhere('user_two_id', $request->user()->id))
+                ->where('sender_id', '!=', $userId)
+                ->whereNull('read_at')
+                ->whereRaw(
+                    "messages.sent_at > COALESCE(CASE WHEN chats.user_one_id = ? THEN chats.user_one_cleared_at ELSE chats.user_two_cleared_at END, '1970-01-01 00:00:00')",
+                    [$userId],
+                )])
+            ->where(function (Builder $query) use ($userId): void {
+                $query
+                    ->where(function (Builder $one) use ($userId): void {
+                        $one->where('user_one_id', $userId)
+                            ->where(function (Builder $visible): void {
+                                $visible->whereNull('user_one_cleared_at')
+                                    ->orWhereHas('messages', fn (Builder $messages) => $messages
+                                        ->whereColumn('messages.sent_at', '>', 'chats.user_one_cleared_at'));
+                            });
+                    })
+                    ->orWhere(function (Builder $two) use ($userId): void {
+                        $two->where('user_two_id', $userId)
+                            ->where(function (Builder $visible): void {
+                                $visible->whereNull('user_two_cleared_at')
+                                    ->orWhereHas('messages', fn (Builder $messages) => $messages
+                                        ->whereColumn('messages.sent_at', '>', 'chats.user_two_cleared_at'));
+                            });
+                    });
+            })
             ->latest('updated_at')
             ->paginate((int) $request->query('per_page', 25));
 
@@ -78,14 +99,17 @@ class ChatController extends Controller
     public function messages(Request $request, Chat $chat): JsonResponse
     {
         abort_unless($chat->hasParticipant($request->user()->id), 403);
+        $clearedAt = $chat->clearedAtFor($request->user()->id);
 
         $chat->messages()
             ->where('sender_id', '!=', $request->user()->id)
             ->whereNull('read_at')
+            ->when($clearedAt, fn (Builder $query) => $query->where('sent_at', '>', $clearedAt))
             ->update(['read_at' => now()]);
 
         $messages = $chat->messages()
             ->with('sender')
+            ->when($clearedAt, fn (Builder $query) => $query->where('sent_at', '>', $clearedAt))
             ->latest('sent_at')
             ->paginate((int) $request->query('per_page', 50));
 
@@ -184,6 +208,47 @@ class ChatController extends Controller
         return response()->json([
             'message' => 'OK',
             'data' => $this->conversations->chatPayload($chat, $request->user()),
+        ]);
+    }
+
+    public function destroy(Request $request, Chat $chat): JsonResponse
+    {
+        abort_unless($chat->hasParticipant($request->user()->id), 403);
+        $permanentlyDeleted = false;
+
+        DB::transaction(function () use ($chat, $request, &$permanentlyDeleted): void {
+            $lockedChat = Chat::query()->lockForUpdate()->findOrFail($chat->id);
+            $clearedAt = now();
+            $lockedChat->update([
+                $lockedChat->clearedColumnFor($request->user()->id) => $clearedAt,
+            ]);
+            $lockedChat->refresh();
+            $latestMessageAt = $lockedChat->messages()->max('sent_at');
+            $oneCleared = $lockedChat->user_one_cleared_at;
+            $twoCleared = $lockedChat->user_two_cleared_at;
+
+            if (
+                $oneCleared
+                && $twoCleared
+                && (
+                    ! $latestMessageAt
+                    || (
+                        $oneCleared->greaterThanOrEqualTo($latestMessageAt)
+                        && $twoCleared->greaterThanOrEqualTo($latestMessageAt)
+                    )
+                )
+            ) {
+                $lockedChat->delete();
+                $permanentlyDeleted = true;
+            }
+        });
+
+        return response()->json([
+            'message' => 'Conversazione eliminata.',
+            'data' => [
+                'removed' => true,
+                'permanently_deleted' => $permanentlyDeleted,
+            ],
         ]);
     }
 }

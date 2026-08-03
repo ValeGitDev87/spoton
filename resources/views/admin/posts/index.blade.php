@@ -24,6 +24,15 @@
                     @endforeach
                 </select>
             </div>
+            <div style="min-width:190px;">
+                <label for="category">Categoria</label>
+                <select id="category" name="category">
+                    <option value="">Tutte</option>
+                    @foreach (['spotted_love' => 'Spotted / Amore', 'weather_transport' => 'Meteo e trasporti', 'gossip_events' => 'Gossip ed eventi'] as $value => $label)
+                        <option value="{{ $value }}" @selected($category === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+            </div>
             <button class="btn" type="submit">Filtra</button>
             <a class="btn secondary" href="{{ route('admin.posts.index') }}">Reset</a>
         </form>
@@ -34,6 +43,7 @@
                     <th>Annuncio</th>
                     <th>Autore</th>
                     <th>Luogo</th>
+                    <th>Categoria</th>
                     <th>Data vista</th>
                     <th>Stato</th>
                     <th>Scadenza</th>
@@ -51,6 +61,7 @@
                         </td>
                         <td>{{ $post->author?->display_name }}</td>
                         <td>{{ $post->location?->name }}</td>
+                        <td>{{ \App\Support\PostCategory::label($post->category) }}</td>
                         <td>{{ $post->sighting_date?->format('d/m/Y') }}</td>
                         <td><span class="badge status-{{ $post->status }}">{{ $post->status }}</span></td>
                         <td>{{ $post->expires_at?->format('d/m/Y H:i') }}</td>
@@ -82,7 +93,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7">Nessun post trovato.</td>
+                        <td colspan="8">Nessun post trovato.</td>
                     </tr>
                 @endforelse
             </tbody>

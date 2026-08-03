@@ -25,6 +25,7 @@ class PostController extends Controller
                 });
             })
             ->when($request->query('status'), fn ($query, string $status) => $query->where('status', $status))
+            ->when($request->query('category'), fn ($query, string $category) => $query->where('category', $category))
             ->when($request->query('location_id'), fn ($query, string $locationId) => $query->where('location_id', $locationId))
             ->latest()
             ->paginate(20)
@@ -34,6 +35,7 @@ class PostController extends Controller
             'posts' => $posts,
             'search' => $request->query('search', ''),
             'status' => $request->query('status', ''),
+            'category' => $request->query('category', ''),
         ]);
     }
 

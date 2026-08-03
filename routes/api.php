@@ -32,6 +32,7 @@ Route::post('/auth/reset-password', [AuthPasswordController::class, 'reset'])->m
 Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (): void {
     Route::get('/me', [AuthController::class, 'me']);
     Route::patch('/me', [ProfileController::class, 'update']);
+    Route::patch('/me/public-profile', [ProfileController::class, 'updatePublicProfile']);
     Route::delete('/me', [AccountController::class, 'destroy'])->middleware('throttle:5,1');
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::post('/auth/email/verification-notification', [EmailVerificationController::class, 'store'])->middleware('throttle:3,1');
@@ -47,6 +48,8 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::get('/users/me/stats', [ProfileController::class, 'stats']);
     Route::get('/users/me/posts', [ProfileController::class, 'posts']);
     Route::get('/users/me/karma', [ProfileController::class, 'karma']);
+    Route::get('/users/search', [ProfileController::class, 'searchUsers']);
+    Route::get('/users/{user}/public-profile', [ProfileController::class, 'publicProfile']);
     Route::post('/users/me/photos', [ProfileController::class, 'storePhoto']);
     Route::delete('/users/me/photos/{photoId}', [ProfileController::class, 'destroyPhoto']);
 
@@ -59,6 +62,7 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::get('/chats/{chat}/messages', [ChatController::class, 'messages']);
     Route::post('/chats/{chat}/messages', [ChatController::class, 'send'])->middleware('throttle:messages');
     Route::post('/chats/{chat}/reveal-identity', [ChatController::class, 'revealIdentity'])->middleware('throttle:5,1');
+    Route::delete('/chats/{chat}', [ChatController::class, 'destroy']);
 
     Route::get('/challenges/pending', [ChallengeController::class, 'pending']);
     Route::post('/challenges', [ChallengeController::class, 'store'])->middleware('throttle:challenges');

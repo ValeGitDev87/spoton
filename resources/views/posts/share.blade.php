@@ -125,7 +125,7 @@
 
     <main>
         @if ($available)
-            <p class="eyebrow">Spotted / Amore</p>
+            <p class="eyebrow">{{ $categoryLabel }}</p>
             <h1>{{ $authorName === 'Ghost' ? 'Un incontro raccontato da Ghost' : "Un incontro raccontato da {$authorName}" }}</h1>
             <p class="place">
                 <span aria-hidden="true">⌖</span>

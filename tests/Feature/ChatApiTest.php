@@ -131,4 +131,59 @@ class ChatApiTest extends TestCase
             ->assertJsonPath('data.49.text', 'Messaggio 55')
             ->assertJsonPath('meta.last_page', 2);
     }
+
+    public function test_conversation_is_hidden_per_user_and_deleted_after_both_clear_it(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        [$one, $two] = Chat::sortedPair($first->id, $second->id);
+        $chat = Chat::query()->create(['user_one_id' => $one, 'user_two_id' => $two]);
+        $chat->messages()->create([
+            'sender_id' => $first->id,
+            'text' => 'Messaggio da eliminare',
+            'sent_at' => now()->subMinute(),
+        ]);
+
+        $this->actingAs($first, 'sanctum')->deleteJson("/api/chats/{$chat->id}")
+            ->assertOk()
+            ->assertJsonPath('data.permanently_deleted', false);
+
+        $this->actingAs($first, 'sanctum')->getJson('/api/chats')->assertJsonCount(0, 'data');
+        $this->actingAs($second, 'sanctum')->getJson('/api/chats')->assertJsonCount(1, 'data');
+
+        $this->actingAs($second, 'sanctum')->deleteJson("/api/chats/{$chat->id}")
+            ->assertOk()
+            ->assertJsonPath('data.permanently_deleted', true);
+
+        $this->assertDatabaseMissing('chats', ['id' => $chat->id]);
+        $this->assertDatabaseMissing('messages', ['chat_id' => $chat->id]);
+    }
+
+    public function test_new_message_restores_a_cleared_chat_without_old_history(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        [$one, $two] = Chat::sortedPair($first->id, $second->id);
+        $chat = Chat::query()->create(['user_one_id' => $one, 'user_two_id' => $two]);
+        $chat->messages()->create([
+            'sender_id' => $second->id,
+            'text' => 'Vecchia cronologia',
+            'sent_at' => now()->subMinutes(2),
+        ]);
+
+        $this->actingAs($first, 'sanctum')->deleteJson("/api/chats/{$chat->id}")->assertOk();
+        $this->travel(2)->seconds();
+        $this->actingAs($second, 'sanctum')->postJson("/api/chats/{$chat->id}/messages", [
+            'text' => 'Nuovo messaggio',
+        ])->assertCreated();
+
+        $this->actingAs($first, 'sanctum')->getJson('/api/chats')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $chat->id)
+            ->assertJsonPath('data.0.last_message.text', 'Nuovo messaggio');
+        $this->actingAs($first, 'sanctum')->getJson("/api/chats/{$chat->id}/messages")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.text', 'Nuovo messaggio');
+    }
 }

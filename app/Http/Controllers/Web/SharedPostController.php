@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Post;
+use App\Support\PostCategory;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
 
@@ -34,6 +35,7 @@ class SharedPostController extends Controller
             'description' => $description,
             'imageUrl' => asset('images/share/spoton-share.png'),
             'post' => $post,
+            'categoryLabel' => PostCategory::label($post->category),
             'title' => $available ? "{$authorName} su SpotOn" : 'Annuncio non disponibile',
         ]);
     }

@@ -6,10 +6,12 @@ use App\Http\Controllers\Api\Concerns\SerializesPosts;
 use App\Http\Controllers\Api\Concerns\SerializesUsers;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Profile\UpdateProfileRequest;
+use App\Http\Requests\Profile\UpdatePublicProfileRequest;
 use App\Models\Chat;
 use App\Models\Favorite;
 use App\Models\Like;
 use App\Models\Post;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,6 +31,61 @@ class ProfileController extends Controller
             'data' => [
                 'user' => $this->userPayload($request->user()->refresh()),
             ],
+        ]);
+    }
+
+    public function updatePublicProfile(UpdatePublicProfileRequest $request): JsonResponse
+    {
+        $request->user()->update($request->validated());
+
+        return response()->json([
+            'message' => 'Visibilità del profilo aggiornata.',
+            'data' => [
+                'user' => $this->userPayload($request->user()->refresh()),
+            ],
+        ]);
+    }
+
+    public function searchUsers(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'query' => ['required', 'string', 'min:1', 'max:120'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:30'],
+        ]);
+        $perPage = (int) ($data['per_page'] ?? 20);
+        $users = User::query()
+            ->where('id', '!=', $request->user()->id)
+            ->where('is_admin', false)
+            ->where('is_suspended', false)
+            ->where('display_name', 'like', '%'.$data['query'].'%')
+            ->orderBy('display_name')
+            ->paginate($perPage);
+
+        return response()->json([
+            'message' => 'OK',
+            'data' => collect($users->items())->map(fn (User $user) => [
+                'id' => $user->id,
+                'display_name' => $user->display_name,
+                'avatar_color' => $user->avatar_color,
+                'avatar_url' => $user->avatar_url,
+            ])->values(),
+            'meta' => [
+                'current_page' => $users->currentPage(),
+                'last_page' => $users->lastPage(),
+                'per_page' => $users->perPage(),
+                'total' => $users->total(),
+            ],
+        ]);
+    }
+
+    public function publicProfile(Request $request, User $user): JsonResponse
+    {
+        abort_if($user->is_admin || $user->is_suspended, 404);
+
+        return response()->json([
+            'message' => 'OK',
+            'data' => $this->publicUserProfilePayload($user),
         ]);
     }
 
@@ -170,6 +227,10 @@ class ProfileController extends Controller
 
         $this->deleteLocalPublicPhoto($removedUrl);
         $updates = ['photos' => $photos];
+        $updates['public_photo_urls'] = array_values(array_intersect(
+            $user->public_photo_urls ?? [],
+            $photos,
+        ));
 
         if ($user->avatar_url === $removedUrl) {
             $updates['avatar_url'] = null;

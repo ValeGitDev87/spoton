@@ -32,6 +32,7 @@ trait SerializesPosts
             ],
             'location' => $this->locationPayload($post->location),
             'text' => $post->text,
+            'category' => $post->category,
             'musica' => $post->musica,
             'song_quote' => $post->song_quote ?? $post->musica,
             'audio' => $post->audio_url ? [

@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Post;
 
+use App\Support\PostCategory;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdatePostRequest extends FormRequest
 {
@@ -15,6 +17,7 @@ class UpdatePostRequest extends FormRequest
     {
         return [
             'text' => ['sometimes', 'string', 'min:3', 'max:2000'],
+            'category' => ['sometimes', 'string', Rule::in(PostCategory::values())],
             'musica' => ['sometimes', 'nullable', 'string', 'max:255'],
             'song_quote' => ['sometimes', 'nullable', 'string', 'max:255'],
             'audio' => ['sometimes', 'nullable', 'file', 'max:1024', 'mimetypes:audio/mp4,audio/x-m4a,audio/aac,audio/mpeg,audio/webm,video/mp4'],

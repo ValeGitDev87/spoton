@@ -3,7 +3,9 @@
 namespace App\Http\Requests\Post;
 
 use App\Models\Location;
+use App\Support\PostCategory;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StorePostRequest extends FormRequest
@@ -19,6 +21,7 @@ class StorePostRequest extends FormRequest
             'location_id' => ['required', 'uuid', 'exists:locations,id'],
             'location_password' => ['nullable', 'string', 'max:255'],
             'text' => ['required', 'string', 'min:3', 'max:2000'],
+            'category' => ['sometimes', 'string', Rule::in(PostCategory::values())],
             'musica' => ['nullable', 'string', 'max:255'],
             'song_quote' => ['nullable', 'string', 'max:255'],
             'audio' => ['nullable', 'file', 'max:1024', 'mimetypes:audio/mp4,audio/x-m4a,audio/aac,audio/mpeg,audio/webm,video/mp4'],

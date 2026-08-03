@@ -85,6 +85,7 @@ class DemoDataSeeder extends Seeder
                 null,
                 'La musica del locale in sottofondo',
             ];
+            $categories = ['spotted_love', 'weather_transport', 'gossip_events'];
 
             $posts = collect();
 
@@ -96,6 +97,7 @@ class DemoDataSeeder extends Seeder
                     'author_id' => $author->id,
                     'location_id' => $location->id,
                     'text' => $texts[$i % count($texts)],
+                    'category' => $categories[$i % count($categories)],
                     'musica' => $musiche[$i % count($musiche)],
                     'song_quote' => $musiche[$i % count($musiche)],
                     'sighting_date' => now()->subDays(random_int(0, 2))->toDateString(),

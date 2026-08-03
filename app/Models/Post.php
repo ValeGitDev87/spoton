@@ -17,6 +17,7 @@ class Post extends Model
         'author_id',
         'location_id',
         'text',
+        'category',
         'musica',
         'song_quote',
         'audio_disk',

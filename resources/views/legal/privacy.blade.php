@@ -9,7 +9,7 @@
 <body>
 <main>
     <h1>Privacy Policy di SpotOn</h1>
-    <p class="meta">Ultimo aggiornamento: 21 luglio 2026</p>
+    <p class="meta">Ultimo aggiornamento: 3 agosto 2026</p>
 
     <p>Questa informativa descrive in modo trasparente come SpotOn tratta i dati necessari al funzionamento dell'app e dei suoi servizi.</p>
 
@@ -26,6 +26,9 @@
 
     <h2>Posizione e conservazione</h2>
     <p>La posizione viene trattata solo quando l'utente concede il permesso e la trasmette all'API. Le ultime coordinate vengono eliminate automaticamente dopo {{ config('spoton.privacy.location_retention_hours') }} ore senza aggiornamenti. Le sessioni di presenza concluse vengono eliminate dopo {{ config('spoton.privacy.presence_retention_days') }} giorni.</p>
+
+    <h2>Profilo pubblico e conversazioni</h2>
+    <p>Bio, motto, canzone preferita e fotografie aggiuntive sono visibili agli altri utenti soltanto quando il titolare del profilo sceglie espressamente di pubblicarle. La cancellazione di una conversazione la nasconde inizialmente al solo utente che la richiede. Quando entrambi i partecipanti hanno cancellato la versione corrente della conversazione, chat e messaggi vengono rimossi dal database operativo; eventuali copie tecniche residue seguono il normale ciclo protetto dei backup.</p>
 
     <h2>Condivisione e sicurezza</h2>
     <p>I dati non vengono venduti. Possono essere trattati da fornitori tecnici indispensabili per hosting, email, notifiche e distribuzione dell'app, secondo le relative condizioni di servizio. SpotOn applica controlli di accesso, autenticazione e misure tecniche proporzionate per limitare accessi non autorizzati.</p>

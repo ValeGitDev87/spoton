@@ -48,7 +48,13 @@ class DemoUsersSeeder extends Seeder
                     'avatar_color' => $user['avatar_color'],
                     'auth_provider' => 'email',
                     'bio' => $index === 0 ? 'Account test per provare SpotOn.' : 'Profilo demo SpotOn.',
+                    'motto' => $index === 0 ? 'Le occasioni iniziano da un incontro.' : 'Ogni posto ha una storia.',
+                    'favorite_song' => $index % 2 === 0 ? 'O sole mio' : 'Napule e',
+                    'show_bio' => true,
+                    'show_motto' => true,
+                    'show_favorite_song' => $index % 2 === 0,
                     'photos' => ["https://example.test/photos/{$user['email']}.jpg"],
+                    'public_photo_urls' => ["https://example.test/photos/{$user['email']}.jpg"],
                     'karma' => $index === 0 ? 2 : 0,
                 ],
             );

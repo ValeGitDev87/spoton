@@ -22,6 +22,8 @@ class Chat extends Model
         'context_type',
         'user_one_id',
         'user_two_id',
+        'user_one_cleared_at',
+        'user_two_cleared_at',
         'origin_challenge_id',
         'origin_post_id',
         'ghost_owner_id',
@@ -53,6 +55,8 @@ class Chat extends Model
     {
         return [
             'ghost_identity_revealed_at' => 'datetime',
+            'user_one_cleared_at' => 'datetime',
+            'user_two_cleared_at' => 'datetime',
         ];
     }
 
@@ -115,6 +119,20 @@ class Chat extends Model
     public function hasParticipant(string $userId): bool
     {
         return $this->user_one_id === $userId || $this->user_two_id === $userId;
+    }
+
+    public function clearedAtFor(string $userId)
+    {
+        return $this->user_one_id === $userId
+            ? $this->user_one_cleared_at
+            : $this->user_two_cleared_at;
+    }
+
+    public function clearedColumnFor(string $userId): string
+    {
+        return $this->user_one_id === $userId
+            ? 'user_one_cleared_at'
+            : 'user_two_cleared_at';
     }
 
     public function isGhost(): bool

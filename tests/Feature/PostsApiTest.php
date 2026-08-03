@@ -34,11 +34,13 @@ class PostsApiTest extends TestCase
             ->postJson('/api/posts', [
                 'location_id' => $location->id,
                 'text' => 'Ti ho vista alla metro con un libro blu.',
+                'category' => 'gossip_events',
                 'musica' => 'Quel ritornello che faceva la la la',
                 'sighting_date' => '2026-07-09',
             ])
             ->assertCreated()
             ->assertJsonPath('data.text', 'Ti ho vista alla metro con un libro blu.')
+            ->assertJsonPath('data.category', 'gossip_events')
             ->assertJsonPath('data.musica', 'Quel ritornello che faceva la la la')
             ->assertJsonPath('data.status', 'active')
             ->assertJsonPath('data.is_owner', true);
@@ -46,11 +48,24 @@ class PostsApiTest extends TestCase
         $this->assertDatabaseHas('posts', [
             'author_id' => $user->id,
             'location_id' => $location->id,
+            'category' => 'gossip_events',
             'musica' => 'Quel ritornello che faceva la la la',
             'status' => 'active',
         ]);
 
         Carbon::setTestNow();
+    }
+
+    public function test_post_category_must_be_supported(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/posts', [
+            'location_id' => $this->location()->id,
+            'text' => 'Categoria non valida.',
+            'category' => 'unknown',
+            'sighting_date' => now()->toDateString(),
+        ])->assertUnprocessable()->assertJsonValidationErrors(['category']);
     }
 
     public function test_future_sighting_date_is_rejected(): void
