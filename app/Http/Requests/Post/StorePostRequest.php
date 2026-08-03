@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests\Post;
 
+use App\Models\Location;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class StorePostRequest extends FormRequest
 {
@@ -15,6 +17,7 @@ class StorePostRequest extends FormRequest
     {
         return [
             'location_id' => ['required', 'uuid', 'exists:locations,id'],
+            'location_password' => ['nullable', 'string', 'max:255'],
             'text' => ['required', 'string', 'min:3', 'max:2000'],
             'musica' => ['nullable', 'string', 'max:255'],
             'song_quote' => ['nullable', 'string', 'max:255'],
@@ -24,6 +27,36 @@ class StorePostRequest extends FormRequest
             'is_anonymous' => ['sometimes', 'boolean'],
             'secret_question' => ['nullable', 'string', 'max:500', 'required_with:secret_answer'],
             'secret_answer' => ['nullable', 'string', 'max:255', 'required_with:secret_question'],
+        ];
+    }
+
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if ($validator->errors()->has('location_id')) {
+                    return;
+                }
+
+                $location = Location::query()->find($this->input('location_id'));
+
+                if (! $location?->is_locked) {
+                    return;
+                }
+
+                $password = $this->input('location_password');
+
+                if ($location->accessPasswordMatches(is_string($password) ? $password : null)) {
+                    return;
+                }
+
+                $validator->errors()->add(
+                    'location_password',
+                    filled($password)
+                        ? 'Password del luogo non corretta.'
+                        : 'Inserisci la password del luogo riservato.',
+                );
+            },
         ];
     }
 }

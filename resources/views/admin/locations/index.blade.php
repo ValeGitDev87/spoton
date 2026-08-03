@@ -30,6 +30,7 @@
                     <th>Coordinate</th>
                     <th>Raggio</th>
                     <th>Stato</th>
+                    <th>Accesso</th>
                     <th style="text-align:right;">Azioni</th>
                 </tr>
             </thead>
@@ -53,6 +54,11 @@
                             </span>
                         </td>
                         <td>
+                            <span class="badge {{ $location->is_locked ? 'status-pending' : 'off' }}">
+                                {{ $location->is_locked ? 'Riservato' : 'Libero' }}
+                            </span>
+                        </td>
+                        <td>
                             <div class="actions">
                                 <a class="btn secondary" href="{{ route('admin.locations.edit', $location) }}">Modifica</a>
                                 <form method="post" action="{{ route('admin.locations.destroy', $location) }}" onsubmit="return confirm('Eliminare questo luogo?')">
@@ -65,7 +71,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="8">Nessun luogo trovato.</td>
+                        <td colspan="9">Nessun luogo trovato.</td>
                     </tr>
                 @endforelse
             </tbody>

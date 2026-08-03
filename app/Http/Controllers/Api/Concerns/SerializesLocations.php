@@ -22,6 +22,7 @@ trait SerializesLocations
             'icon' => $location->icon ?: LocationIcon::DEFAULT,
             'icon_library' => 'ionicons',
             'is_active' => $location->is_active,
+            'is_locked' => $location->is_locked,
             'stories_count' => (int) ($location->active_stories_count ?? 0),
             'connected_now_count' => PresenceSession::query()
                 ->where('location_id', $location->id)

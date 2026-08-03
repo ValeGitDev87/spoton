@@ -9,6 +9,7 @@ use App\Models\Location;
 use App\Support\LocationIcon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class AdminLocationController extends Controller
 {
@@ -47,6 +48,12 @@ class AdminLocationController extends Controller
         $data['geo_radius_meters'] = $data['geo_radius_meters'] ?? 100;
         $data['icon'] = $data['icon'] ?? LocationIcon::DEFAULT;
         $data['is_active'] = $data['is_active'] ?? true;
+        $data['is_locked'] = $data['is_locked'] ?? false;
+        $password = trim((string) ($data['access_password'] ?? ''));
+        unset($data['access_password']);
+        $data['access_password_hash'] = $data['is_locked']
+            ? Hash::make($password)
+            : null;
 
         $location = Location::query()->create($data);
 
@@ -66,7 +73,20 @@ class AdminLocationController extends Controller
 
     public function update(UpdateLocationRequest $request, Location $location): JsonResponse
     {
-        $location->update($request->validated());
+        $data = $request->validated();
+        $isLocked = array_key_exists('is_locked', $data)
+            ? (bool) $data['is_locked']
+            : $location->is_locked;
+        $password = trim((string) ($data['access_password'] ?? ''));
+        unset($data['access_password']);
+
+        if (! $isLocked) {
+            $data['access_password_hash'] = null;
+        } elseif ($password !== '') {
+            $data['access_password_hash'] = Hash::make($password);
+        }
+
+        $location->update($data);
 
         return response()->json([
             'message' => 'OK',

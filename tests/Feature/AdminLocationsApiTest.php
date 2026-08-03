@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Location;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AdminLocationsApiTest extends TestCase
@@ -70,6 +71,31 @@ class AdminLocationsApiTest extends TestCase
             ])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('icon');
+    }
+
+    public function test_admin_api_hashes_restricted_location_password(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $response = $this
+            ->actingAs($admin, 'sanctum')
+            ->postJson('/api/admin/locations', [
+                'name' => 'Area Staff',
+                'city' => 'Napoli',
+                'type' => 'altro',
+                'latitude' => 40.8331,
+                'longitude' => 14.2294,
+                'icon' => 'location-outline',
+                'is_locked' => true,
+                'access_password' => 'staff123',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.is_locked', true)
+            ->assertJsonMissingPath('data.access_password_hash');
+
+        $location = Location::query()->findOrFail($response->json('data.id'));
+
+        $this->assertTrue(Hash::check('staff123', $location->access_password_hash));
     }
 
     public function test_admin_can_update_and_delete_location(): void

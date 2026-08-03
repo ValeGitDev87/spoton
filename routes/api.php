@@ -69,6 +69,8 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::get('/locations', [LocationController::class, 'index']);
     Route::get('/locations/story-feed', [LocationController::class, 'storyFeed']);
     Route::get('/locations/nearby', [LocationController::class, 'nearby']);
+    Route::post('/locations/{location}/verify-access', [LocationController::class, 'verifyAccess'])
+        ->middleware('throttle:10,1');
     Route::get('/locations/{location}/stories', [StoryController::class, 'index']);
     Route::get('/map', MapController::class);
 

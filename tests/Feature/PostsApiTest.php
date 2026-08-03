@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -70,6 +71,45 @@ class PostsApiTest extends TestCase
             ->assertJsonValidationErrors(['sighting_date']);
 
         Carbon::setTestNow();
+    }
+
+    public function test_restricted_location_password_is_required_to_create_post(): void
+    {
+        $user = User::factory()->create();
+        $location = $this->location();
+        $location->update([
+            'is_locked' => true,
+            'access_password_hash' => Hash::make('posto123'),
+        ]);
+        $payload = [
+            'location_id' => $location->id,
+            'text' => 'Annuncio in un luogo riservato.',
+            'sighting_date' => now()->toDateString(),
+        ];
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->postJson('/api/posts', $payload)
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('location_password');
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->postJson('/api/posts', [
+                ...$payload,
+                'location_password' => 'sbagliata',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('location_password');
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->postJson('/api/posts', [
+                ...$payload,
+                'location_password' => 'posto123',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.location.is_locked', true);
     }
 
     public function test_owner_can_update_and_remove_post(): void

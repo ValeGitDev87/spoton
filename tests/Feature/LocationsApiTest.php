@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Location;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class LocationsApiTest extends TestCase
@@ -39,7 +40,48 @@ class LocationsApiTest extends TestCase
             ->assertJsonPath('data.0.name', 'Metro Mergellina')
             ->assertJsonPath('data.0.city', 'Napoli')
             ->assertJsonPath('data.0.icon', 'location-outline')
-            ->assertJsonPath('data.0.icon_library', 'ionicons');
+            ->assertJsonPath('data.0.icon_library', 'ionicons')
+            ->assertJsonPath('data.0.is_locked', false);
+    }
+
+    public function test_restricted_location_can_be_unlocked_with_its_password(): void
+    {
+        $user = User::factory()->create();
+        $location = Location::query()->create([
+            'name' => 'Club Riservato',
+            'short' => 'Club',
+            'city' => 'Napoli',
+            'type' => 'altro',
+            'latitude' => 40.8518000,
+            'longitude' => 14.2681000,
+            'geo_radius_meters' => 100,
+            'is_active' => true,
+            'is_locked' => true,
+            'access_password_hash' => Hash::make('club1234'),
+        ]);
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->getJson('/api/locations')
+            ->assertOk()
+            ->assertJsonPath('data.0.is_locked', true)
+            ->assertJsonMissingPath('data.0.access_password_hash');
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->postJson("/api/locations/{$location->id}/verify-access", [
+                'password' => 'errata',
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('password');
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->postJson("/api/locations/{$location->id}/verify-access", [
+                'password' => 'club1234',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.unlocked', true);
     }
 
     public function test_nearby_locations_are_filtered_and_sorted_by_distance(): void

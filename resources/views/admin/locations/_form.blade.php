@@ -58,6 +58,19 @@
         document.getElementById('icon').addEventListener('change', function () {
             document.getElementById('location-icon-preview').setAttribute('name', this.value);
         });
+
+        const locationLock = document.getElementById('is_locked');
+        const accessPasswordField = document.getElementById('access-password-field');
+        const accessPassword = document.getElementById('access_password');
+
+        function syncLocationLock() {
+            accessPasswordField.hidden = !locationLock.checked;
+            accessPassword.required = locationLock.checked
+                && accessPassword.dataset.hasPassword !== '1';
+        }
+
+        locationLock.addEventListener('change', syncLocationLock);
+        syncLocationLock();
     </script>
 @endpush
 
@@ -78,10 +91,36 @@
     </div>
 </div>
 
-<label class="check-row">
-    <input name="is_active" type="checkbox" value="1" @checked(old('is_active', $location->is_active ?? true))>
-    <span>Luogo attivo</span>
-</label>
+<div class="grid">
+    <div>
+        <label class="check-row">
+            <input name="is_active" type="checkbox" value="1" @checked(old('is_active', $location->is_active ?? true))>
+            <span>Luogo attivo</span>
+        </label>
+
+        <label class="check-row">
+            <input id="is_locked" name="is_locked" type="checkbox" value="1" @checked(old('is_locked', $location->is_locked ?? false))>
+            <span>Luogo riservato con password</span>
+        </label>
+    </div>
+
+    <div class="field" id="access-password-field">
+        <label for="access_password">Password del luogo</label>
+        <input
+            autocomplete="new-password"
+            data-has-password="{{ $location->access_password_hash ? '1' : '0' }}"
+            id="access_password"
+            maxlength="255"
+            minlength="4"
+            name="access_password"
+            placeholder="{{ $location->access_password_hash ? 'Lascia vuoto per mantenere quella attuale' : 'Minimo 4 caratteri' }}"
+            type="password"
+        >
+        <small class="field-help">
+            La password viene salvata in forma protetta e non sara mai mostrata nell'app.
+        </small>
+    </div>
+</div>
 
 <div class="actions" style="justify-content:flex-start;">
     <button class="btn" type="submit">{{ $submitLabel }}</button>

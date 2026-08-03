@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Location;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AdminLocationsWebTest extends TestCase
@@ -108,6 +109,77 @@ class AdminLocationsWebTest extends TestCase
 
         $this->assertSame('40.8447316', $location->latitude);
         $this->assertSame('14.2305912', $location->longitude);
+    }
+
+    public function test_admin_can_manage_restricted_location_password(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this
+            ->actingAs($admin)
+            ->post('/admin/locations', [
+                'name' => 'Terrazza Privata',
+                'short' => 'Terrazza',
+                'city' => 'Napoli',
+                'type' => 'altro',
+                'latitude' => 40.8447000,
+                'longitude' => 14.2305000,
+                'geo_radius_meters' => 100,
+                'icon' => 'location-outline',
+                'is_active' => '1',
+                'is_locked' => '1',
+                'access_password' => 'riservata123',
+            ])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect('/admin/locations');
+
+        $location = Location::query()
+            ->where('name', 'Terrazza Privata')
+            ->firstOrFail();
+
+        $this->assertTrue($location->is_locked);
+        $this->assertTrue(Hash::check('riservata123', $location->access_password_hash));
+        $this->assertNotSame('riservata123', $location->access_password_hash);
+
+        $currentHash = $location->access_password_hash;
+
+        $this
+            ->actingAs($admin)
+            ->patch("/admin/locations/{$location->id}", [
+                'name' => $location->name,
+                'short' => $location->short,
+                'city' => $location->city,
+                'type' => $location->type,
+                'latitude' => $location->latitude,
+                'longitude' => $location->longitude,
+                'geo_radius_meters' => $location->geo_radius_meters,
+                'icon' => $location->icon,
+                'is_active' => '1',
+                'is_locked' => '1',
+                'access_password' => '',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame($currentHash, $location->refresh()->access_password_hash);
+
+        $this
+            ->actingAs($admin)
+            ->patch("/admin/locations/{$location->id}", [
+                'name' => $location->name,
+                'short' => $location->short,
+                'city' => $location->city,
+                'type' => $location->type,
+                'latitude' => $location->latitude,
+                'longitude' => $location->longitude,
+                'geo_radius_meters' => $location->geo_radius_meters,
+                'icon' => $location->icon,
+                'is_active' => '1',
+            ])
+            ->assertSessionHasNoErrors();
+
+        $location->refresh();
+        $this->assertFalse($location->is_locked);
+        $this->assertNull($location->access_password_hash);
     }
 
     public function test_admin_can_update_location_coordinates_from_web_form(): void

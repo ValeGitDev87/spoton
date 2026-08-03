@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Location;
 
+use App\Models\Location;
 use App\Support\LocationIcon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -38,6 +39,28 @@ class UpdateLocationRequest extends FormRequest
             'geo_radius_meters' => ['sometimes', 'integer', 'min:1', 'max:200000'],
             'icon' => ['sometimes', 'required', 'string', Rule::in(LocationIcon::codes())],
             'is_active' => ['sometimes', 'boolean'],
+            'is_locked' => ['sometimes', 'boolean'],
+            'access_password' => [
+                Rule::requiredIf(function (): bool {
+                    $location = $this->route('location');
+
+                    return $this->boolean('is_locked')
+                        && (! $location instanceof Location
+                            || ! $location->access_password_hash);
+                }),
+                'nullable',
+                'string',
+                'min:4',
+                'max:255',
+            ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'access_password.required' => 'Inserisci una password per il luogo riservato.',
+            'access_password.min' => 'La password del luogo deve contenere almeno 4 caratteri.',
         ];
     }
 

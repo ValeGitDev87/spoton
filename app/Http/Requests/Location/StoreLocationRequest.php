@@ -33,6 +33,22 @@ class StoreLocationRequest extends FormRequest
             'geo_radius_meters' => ['sometimes', 'integer', 'min:1', 'max:200000'],
             'icon' => ['required', 'string', Rule::in(LocationIcon::codes())],
             'is_active' => ['sometimes', 'boolean'],
+            'is_locked' => ['sometimes', 'boolean'],
+            'access_password' => [
+                Rule::requiredIf(fn (): bool => $this->boolean('is_locked')),
+                'nullable',
+                'string',
+                'min:4',
+                'max:255',
+            ],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'access_password.required' => 'Inserisci una password per il luogo riservato.',
+            'access_password.min' => 'La password del luogo deve contenere almeno 4 caratteri.',
         ];
     }
 

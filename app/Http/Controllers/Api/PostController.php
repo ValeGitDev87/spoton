@@ -126,8 +126,7 @@ class PostController extends Controller
 
         if ($hasCoordinates) {
             $nearest = $posts
-                ->sort(fn (array $left, array $right) =>
-                    $left['distance_km'] <=> $right['distance_km']
+                ->sort(fn (array $left, array $right) => $left['distance_km'] <=> $right['distance_km']
                     ?: $right['post']->created_at->getTimestamp()
                         <=> $left['post']->created_at->getTimestamp())
                 ->take(self::NEAREST_PRIORITY_COUNT)
@@ -288,7 +287,12 @@ class PostController extends Controller
 
     private function preparePostData(array $data): array
     {
-        unset($data['audio'], $data['audio_duration_seconds'], $data['remove_audio']);
+        unset(
+            $data['audio'],
+            $data['audio_duration_seconds'],
+            $data['location_password'],
+            $data['remove_audio'],
+        );
 
         if (array_key_exists('song_quote', $data) && ! array_key_exists('musica', $data)) {
             $data['musica'] = $data['song_quote'];

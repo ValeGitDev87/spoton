@@ -1,6 +1,6 @@
 # SpotOn - TODO E Stato Progetto
 
-Ultimo aggiornamento: 24 luglio 2026.
+Ultimo aggiornamento: 3 agosto 2026.
 
 Questo file e' il riferimento operativo da aggiornare dopo ogni blocco, test locale e verifica VPS.
 
@@ -33,6 +33,7 @@ Questo file e' il riferimento operativo da aggiornare dopo ogni blocco, test loc
 - [x] Push token e logica push per commenti/challenge.
 - [x] Cinque utenti demo `@test.it` tramite `DemoUsersSeeder`.
 - [x] Configurazione Expo SDK 54 e identificatore `it.spotonapp.app`.
+- [x] Luoghi riservati con flag admin, password protetta, verifica API e blocco creazione post.
 
 ## Backend - Blocco 1
 
@@ -76,6 +77,8 @@ Stato: da fare dopo entrambi i blocchi backend.
 - [ ] Queue e scheduler verificati.
 - [ ] API provate sul dominio reale.
 - [ ] Dashboard e moderazione provate sul dominio reale.
+- [ ] Eseguire la migration `2026_08_03_000100_add_access_control_to_locations_table`.
+- [ ] Creare un luogo riservato, verificare il popup nell'app e provare password errata/corretta.
 
 ## Frontend Expo
 
@@ -92,6 +95,7 @@ Stato: implementazione completata localmente. Restano collaudo manuale su develo
 - [x] Ricerca API con debounce e tastiera gestita.
 - [x] Interazioni del viewer storie collegate a `Io c'ero` e audio.
 - [x] Creazione post completa con Ghost, challenge, data, musica e nota audio da massimo 10 secondi.
+- [x] Selezione luogo riservato con popup password, tastiera adattiva e seconda verifica alla pubblicazione.
 - [x] Registrazione, anteprima, cancellazione e riproduzione delle note audio.
 - [x] Like, commenti, preferiti, condivisione e `Io c'ero` interattivi.
 - [x] Verifica challenge classica collegata a `Io c'ero`.
@@ -134,6 +138,9 @@ Stato: implementazione completata localmente. Restano collaudo manuale su develo
 - [ ] Verifica ticket/receipt e token `DeviceNotRegistered`.
 
 ## Ultima Verifica Locale Nota
+
+- Luoghi riservati: suite Laravel 124 test, 746 assertion.
+- Flusso frontend luoghi riservati: TypeScript OK, Expo Doctor 18/18, export Android/iOS/web OK.
 
 - Laravel: 99 test, 482 assertion.
 - Composer: configurazione valida.

@@ -6,11 +6,13 @@ use App\Http\Controllers\Api\Concerns\SerializesLocations;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Location\NearbyLocationsRequest;
 use App\Http\Requests\Location\StoryFeedLocationsRequest;
+use App\Http\Requests\Location\VerifyLocationAccessRequest;
 use App\Models\Location;
 use App\Services\GeoDistance;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class LocationController extends Controller
 {
@@ -43,6 +45,26 @@ class LocationController extends Controller
         return response()->json([
             'message' => 'OK',
             'data' => $locations,
+        ]);
+    }
+
+    public function verifyAccess(
+        VerifyLocationAccessRequest $request,
+        Location $location,
+    ): JsonResponse {
+        abort_unless($location->is_active, 404);
+
+        if (! $location->accessPasswordMatches($request->validated('password'))) {
+            throw ValidationException::withMessages([
+                'password' => ['Password del luogo non corretta.'],
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Luogo sbloccato.',
+            'data' => [
+                'unlocked' => true,
+            ],
         ]);
     }
 
@@ -123,8 +145,7 @@ class LocationController extends Controller
 
         if ($hasCoordinates) {
             $nearest = $locations
-                ->sort(fn (array $left, array $right) =>
-                    $left['distance_km'] <=> $right['distance_km']
+                ->sort(fn (array $left, array $right) => $left['distance_km'] <=> $right['distance_km']
                     ?: $right['latest_story_at'] <=> $left['latest_story_at'])
                 ->take(self::NEAREST_PRIORITY_COUNT)
                 ->values();

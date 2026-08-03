@@ -9,6 +9,7 @@ use App\Models\Location;
 use App\Support\LocationIcon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class LocationController extends Controller
@@ -44,6 +45,7 @@ class LocationController extends Controller
                 'icon' => LocationIcon::DEFAULT,
                 'geo_radius_meters' => 100,
                 'is_active' => true,
+                'is_locked' => false,
             ]),
             'iconOptions' => LocationIcon::options(),
         ]);
@@ -55,6 +57,12 @@ class LocationController extends Controller
         $data['short'] = $data['short'] ?? $data['name'];
         $data['geo_radius_meters'] = $data['geo_radius_meters'] ?? 100;
         $data['is_active'] = $request->boolean('is_active');
+        $data['is_locked'] = $request->boolean('is_locked');
+        $password = trim((string) ($data['access_password'] ?? ''));
+        unset($data['access_password']);
+        $data['access_password_hash'] = $data['is_locked']
+            ? Hash::make($password)
+            : null;
 
         Location::query()->create($data);
 
@@ -75,6 +83,15 @@ class LocationController extends Controller
     {
         $data = $request->validated();
         $data['is_active'] = $request->boolean('is_active');
+        $data['is_locked'] = $request->boolean('is_locked');
+        $password = trim((string) ($data['access_password'] ?? ''));
+        unset($data['access_password']);
+
+        if (! $data['is_locked']) {
+            $data['access_password_hash'] = null;
+        } elseif ($password !== '') {
+            $data['access_password_hash'] = Hash::make($password);
+        }
 
         $location->update($data);
 
