@@ -100,7 +100,7 @@
         </table>
 
         <div class="pagination">
-            {{ $reports->links() }}
+            {{ $reports->links('admin._pagination') }}
         </div>
     </section>
 @endsection

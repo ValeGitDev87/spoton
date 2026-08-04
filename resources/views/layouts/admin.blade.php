@@ -170,7 +170,30 @@
             background: #fef3f2;
             color: #b42318;
         }
-        .pagination { margin-top: 14px; }
+        .pagination { margin-top: 14px; overflow-x: auto; }
+        .admin-pager { align-items: center; display: flex; gap: 6px; justify-content: flex-end; min-width: max-content; }
+        .admin-page-list { align-items: center; display: flex; gap: 4px; }
+        .admin-page-arrow, .admin-page-number, .admin-page-ellipsis {
+            align-items: center;
+            display: inline-flex;
+            justify-content: center;
+            height: 36px;
+            min-width: 36px;
+            text-decoration: none;
+        }
+        .admin-page-arrow, .admin-page-number {
+            background: #fff;
+            border: 1px solid #d0d5dd;
+            border-radius: 6px;
+            color: #344054;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .admin-page-arrow { font-size: 22px; line-height: 1; }
+        .admin-page-number.active { background: #111827; border-color: #111827; color: #fff; }
+        .admin-page-arrow.disabled { color: #98a2b3; cursor: default; opacity: .55; }
+        .admin-page-arrow:not(.disabled):hover, .admin-page-number:not(.active):hover { background: #f2f4f7; }
+        .admin-page-ellipsis { color: #667085; }
         @media (max-width: 820px) {
             .shell { grid-template-columns: 1fr; }
             .sidebar { border-right: 0; border-bottom: 1px solid #e5e7eb; }

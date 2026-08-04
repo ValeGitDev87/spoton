@@ -11,7 +11,7 @@ trait SerializesPosts
 
     private function postPayload(Post $post, User $viewer, ?float $distanceKm = null, bool $detail = false): array
     {
-        $post->loadMissing(['author', 'location']);
+        $post->loadMissing(['author', 'location', 'communityVotes']);
         $isOwner = $post->author_id === $viewer->id;
         $canSeeAuthor = ! $post->is_anonymous || $isOwner || $viewer->is_admin;
 
@@ -53,6 +53,11 @@ trait SerializesPosts
             'share_count' => $post->share_count ?? 0,
             'io_cero_count' => $post->io_cero_count ?? 0,
             'spot_on_count' => $post->spot_on_count ?? $post->io_cero_count ?? 0,
+            'community_confirm_count' => $post->community_confirm_count ?? 0,
+            'community_false_count' => $post->community_false_count ?? 0,
+            'community_status' => $post->community_status ?? 'pending',
+            'community_vote_by_me' => $post->communityVotes
+                ->firstWhere('user_id', $viewer->id)?->vote,
             'liked_by_me' => $post->likes()
                 ->where('user_id', $viewer->id)
                 ->exists(),

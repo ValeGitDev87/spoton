@@ -16,10 +16,10 @@ class StoryController extends Controller
     public function index(Request $request, Location $location): JsonResponse
     {
         $posts = Post::query()
-            ->with(['author', 'location'])
+            ->with(['author', 'location', 'communityVotes'])
             ->where('location_id', $location->id)
             ->where('status', 'active')
-            ->where('created_at', '>', now()->subDay())
+            ->where('created_at', '>', now()->subHours(48))
             ->where('expires_at', '>', now())
             ->oldest()
             ->get()

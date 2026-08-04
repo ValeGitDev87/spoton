@@ -160,7 +160,16 @@
                 </div>
             </article>
 
-            <p class="footer-note">Accedi a SpotOn per commentare, mettere like o confermare “Io c'ero”.</p>
+            @if ($post->category === \App\Support\PostCategory::WEATHER_TRANSPORT)
+                <p class="footer-note">
+                    {{ $post->community_status === 'verified' ? '✓ Verificato dalla Community. ' : '' }}
+                    Accedi a SpotOn per confermare la segnalazione o indicarla come falsa o risolta.
+                </p>
+            @elseif ($post->category === \App\Support\PostCategory::GOSSIP_EVENTS)
+                <p class="footer-note">Accedi a SpotOn per commentare, mettere like o condividere.</p>
+            @else
+                <p class="footer-note">Accedi a SpotOn per commentare, mettere like o confermare “Io c'ero”.</p>
+            @endif
         @else
             <article>
                 <div class="unavailable">

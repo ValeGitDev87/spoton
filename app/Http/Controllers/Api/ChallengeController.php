@@ -11,6 +11,7 @@ use App\Models\PostIWasThere;
 use App\Models\User;
 use App\Services\Chat\ConversationService;
 use App\Services\Push\PushNotificationService;
+use App\Support\PostCategory;
 use App\Support\Push\PushNotificationType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -62,6 +63,7 @@ class ChallengeController extends Controller
 
     public function verifyClassic(Request $request, Post $post): JsonResponse
     {
+        $this->ensureSupportsChallenges($post);
         abort_if($post->author_id === $request->user()->id, 422, 'Non puoi verificare un tuo post.');
         abort_if(! $post->secret_answer_hash, 422, 'Questo post non ha una domanda di verifica.');
 
@@ -131,6 +133,7 @@ class ChallengeController extends Controller
 
         $mode = $data['mode'] ?? 'question';
         $post = Post::query()->findOrFail($data['post_id']);
+        $this->ensureSupportsChallenges($post);
         $targetUserId = $this->resolveTargetUserId($post, $data);
 
         abort_if($targetUserId === $request->user()->id, 422, 'Non puoi sfidare te stesso.');
@@ -194,6 +197,7 @@ class ChallengeController extends Controller
 
     public function answer(Request $request, Challenge $challenge): JsonResponse
     {
+        $this->ensureSupportsChallenges($challenge->post);
         abort_unless($challenge->target_user_id === $request->user()->id, 403);
         abort_unless(in_array($challenge->status, [Challenge::STATUS_PENDING, Challenge::STATUS_REJECTED], true), 422);
 
@@ -267,6 +271,7 @@ class ChallengeController extends Controller
 
     public function counterProposeClassic(Request $request, Post $post): JsonResponse
     {
+        $this->ensureSupportsChallenges($post);
         abort_if($post->author_id === $request->user()->id, 422, 'Non puoi controproporre su un tuo post.');
         abort_if(! $post->secret_answer_hash, 422, 'Questo post non ha una domanda di verifica.');
 
@@ -297,6 +302,7 @@ class ChallengeController extends Controller
 
     public function counterPropose(Request $request, Challenge $challenge): JsonResponse
     {
+        $this->ensureSupportsChallenges($challenge->post);
         abort_unless($challenge->target_user_id === $request->user()->id, 403);
         abort_unless(in_array($challenge->status, [Challenge::STATUS_PENDING, Challenge::STATUS_REJECTED], true), 422);
 
@@ -321,6 +327,7 @@ class ChallengeController extends Controller
 
     public function counterReview(Request $request, Challenge $challenge): JsonResponse
     {
+        $this->ensureSupportsChallenges($challenge->post);
         $data = $request->validate([
             'accepted' => ['required', 'boolean'],
         ]);
@@ -421,6 +428,15 @@ class ChallengeController extends Controller
             ->findOrFail($data['source_comment_id'] ?? null);
 
         return $comment->author_id;
+    }
+
+    private function ensureSupportsChallenges(Post $post): void
+    {
+        abort_unless(
+            $post->category === PostCategory::SPOTTED_LOVE,
+            422,
+            'Le sfide sono disponibili solo per Spotted / Amore.',
+        );
     }
 
     private function canReviewCounter(User $user, Challenge $challenge): bool

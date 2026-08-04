@@ -36,6 +36,9 @@ class Post extends Model
         'share_count',
         'io_cero_count',
         'spot_on_count',
+        'community_confirm_count',
+        'community_false_count',
+        'community_status',
         'status',
     ];
 
@@ -54,6 +57,8 @@ class Post extends Model
             'share_count' => 'integer',
             'io_cero_count' => 'integer',
             'spot_on_count' => 'integer',
+            'community_confirm_count' => 'integer',
+            'community_false_count' => 'integer',
             'audio_size_bytes' => 'integer',
             'audio_duration_seconds' => 'integer',
         ];
@@ -82,6 +87,11 @@ class Post extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
+    }
+
+    public function communityVotes(): HasMany
+    {
+        return $this->hasMany(PostCommunityVote::class);
     }
 
     public function challenges(): HasMany

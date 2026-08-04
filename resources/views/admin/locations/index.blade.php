@@ -78,7 +78,7 @@
         </table>
 
         <div class="pagination">
-            {{ $locations->links() }}
+            {{ $locations->links('admin._pagination') }}
         </div>
     </section>
 @endsection

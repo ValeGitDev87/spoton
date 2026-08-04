@@ -161,7 +161,7 @@ class ProfileController extends Controller
     {
         $perPage = min(max((int) $request->query('per_page', 20), 1), 50);
         $posts = Post::query()
-            ->with(['author', 'location'])
+            ->with(['author', 'location', 'communityVotes'])
             ->where('author_id', $request->user()->id)
             ->where('status', '!=', 'removed')
             ->latest()

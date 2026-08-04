@@ -25,7 +25,7 @@ class LocationController extends Controller
         $locations = Location::query()
             ->withCount(['posts as active_stories_count' => fn (Builder $query) => $query
                 ->where('status', 'active')
-                ->where('created_at', '>', now()->subDay())
+                ->where('created_at', '>', now()->subHours(48))
                 ->where('expires_at', '>', now())])
             ->where('is_active', true)
             ->when($request->query('search'), function ($query, string $search): void {
@@ -77,7 +77,7 @@ class LocationController extends Controller
         $locations = Location::query()
             ->withCount(['posts as active_stories_count' => fn (Builder $query) => $query
                 ->where('status', 'active')
-                ->where('created_at', '>', now()->subDay())
+                ->where('created_at', '>', now()->subHours(48))
                 ->where('expires_at', '>', now())])
             ->where('is_active', true)
             ->get()
@@ -117,7 +117,7 @@ class LocationController extends Controller
         $perPage = (int) ($request->validated('per_page') ?? 20);
         $activeStories = fn (Builder $query) => $query
             ->where('status', 'active')
-            ->where('created_at', '>', now()->subDay())
+            ->where('created_at', '>', now()->subHours(48))
             ->where('expires_at', '>', now());
 
         $locations = Location::query()

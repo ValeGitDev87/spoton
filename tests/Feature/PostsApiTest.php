@@ -29,7 +29,7 @@ class PostsApiTest extends TestCase
         $user = User::factory()->create();
         $location = $this->location();
 
-        $this
+        $response = $this
             ->actingAs($user, 'sanctum')
             ->postJson('/api/posts', [
                 'location_id' => $location->id,
@@ -44,6 +44,11 @@ class PostsApiTest extends TestCase
             ->assertJsonPath('data.musica', 'Quel ritornello che faceva la la la')
             ->assertJsonPath('data.status', 'active')
             ->assertJsonPath('data.is_owner', true);
+
+        $this->assertEquals(
+            48,
+            abs(Carbon::parse($response->json('data.expires_at'))->diffInHours(now())),
+        );
 
         $this->assertDatabaseHas('posts', [
             'author_id' => $user->id,
@@ -66,6 +71,20 @@ class PostsApiTest extends TestCase
             'category' => 'unknown',
             'sighting_date' => now()->toDateString(),
         ])->assertUnprocessable()->assertJsonValidationErrors(['category']);
+    }
+
+    public function test_secret_verification_is_only_available_for_spotted_love(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user, 'sanctum')->postJson('/api/posts', [
+            'location_id' => $this->location()->id,
+            'text' => 'Segnalazione trasporti.',
+            'category' => 'weather_transport',
+            'sighting_date' => now()->toDateString(),
+            'secret_question' => 'Quale binario?',
+            'secret_answer' => 'Due',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['secret_question']);
     }
 
     public function test_future_sighting_date_is_rejected(): void

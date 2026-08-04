@@ -82,6 +82,7 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::get('/posts/nearby', [PostController::class, 'nearby']);
     Route::post('/posts/{post}/like', [PostEngagementController::class, 'toggleLike'])->middleware('throttle:engagements');
     Route::post('/posts/{post}/io-cero', [PostEngagementController::class, 'toggleIoCero'])->middleware('throttle:engagements');
+    Route::post('/posts/{post}/community-vote', [PostEngagementController::class, 'communityVote'])->middleware('throttle:engagements');
     Route::get('/posts/{post}/io-cero-users', [PostEngagementController::class, 'ioCeroUsers']);
     Route::post('/posts/{post}/verify-answer', [ChallengeController::class, 'verifyClassic'])->middleware('throttle:challenge-answers');
     Route::post('/posts/{post}/counter-propose', [ChallengeController::class, 'counterProposeClassic'])->middleware('throttle:counterproposals');

@@ -37,6 +37,18 @@ class StorePostRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
+                $category = $this->input('category', PostCategory::SPOTTED_LOVE);
+
+                if (
+                    $category !== PostCategory::SPOTTED_LOVE
+                    && ($this->filled('secret_question') || $this->filled('secret_answer'))
+                ) {
+                    $validator->errors()->add(
+                        'secret_question',
+                        'La domanda di verifica e disponibile solo per Spotted / Amore.',
+                    );
+                }
+
                 if ($validator->errors()->has('location_id')) {
                     return;
                 }

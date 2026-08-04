@@ -28,7 +28,7 @@ class PostController extends Controller
         $perPage = min((int) $request->query('per_page', 15), 50);
 
         $posts = Post::query()
-            ->with(['author', 'location'])
+            ->with(['author', 'location', 'communityVotes'])
             ->when(! $request->query('status'), fn (Builder $query) => $query->where('status', 'active'))
             ->when(! $request->query('status'), fn (Builder $query) => $query->where('expires_at', '>', Carbon::now()))
             ->when($request->query('status'), fn (Builder $query, string $status) => $query->where('status', $status))
@@ -104,7 +104,7 @@ class PostController extends Controller
         $perPage = (int) ($request->validated('per_page') ?? 30);
 
         $posts = Post::query()
-            ->with(['author', 'location'])
+            ->with(['author', 'location', 'communityVotes'])
             ->where('status', 'active')
             ->where('expires_at', '>', Carbon::now())
             ->whereHas('location', fn (Builder $query) => $query->where('is_active', true))
@@ -183,7 +183,7 @@ class PostController extends Controller
         $post = Post::query()->create([
             ...$this->preparePostData($request->validated()),
             'author_id' => $request->user()->id,
-            'expires_at' => now()->addHours(24),
+            'expires_at' => now()->addHours(48),
             'status' => 'active',
         ]);
 
@@ -254,7 +254,7 @@ class PostController extends Controller
     public function nearbyPosts(Request $request, float $lat, float $lng, float $radiusKm): array
     {
         return Post::query()
-            ->with(['author', 'location'])
+            ->with(['author', 'location', 'communityVotes'])
             ->where('status', 'active')
             ->where('expires_at', '>', Carbon::now())
             ->whereHas('location', fn (Builder $query) => $query->where('is_active', true))

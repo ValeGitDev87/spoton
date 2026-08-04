@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Post;
+use App\Support\PostCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -45,7 +46,21 @@ class PostController extends Controller
             'status' => ['required', 'in:active,expired,removed,flagged'],
         ]);
 
-        $post->update(['status' => $data['status']]);
+        if (
+            $data['status'] === 'active'
+            && $post->category === PostCategory::WEATHER_TRANSPORT
+            && $post->community_status === 'rejected'
+        ) {
+            $post->communityVotes()->delete();
+            $post->update([
+                'status' => 'active',
+                'community_status' => 'pending',
+                'community_confirm_count' => 0,
+                'community_false_count' => 0,
+            ]);
+        } else {
+            $post->update(['status' => $data['status']]);
+        }
 
         return back()->with('status', 'Stato post aggiornato.');
     }

@@ -61,7 +61,19 @@
                         </td>
                         <td>{{ $post->author?->display_name }}</td>
                         <td>{{ $post->location?->name }}</td>
-                        <td>{{ \App\Support\PostCategory::label($post->category) }}</td>
+                        <td>
+                            {{ \App\Support\PostCategory::label($post->category) }}
+                            @if ($post->category === \App\Support\PostCategory::WEATHER_TRANSPORT)
+                                <div style="color:#667085;font-size:12px;margin-top:4px;">
+                                    Conferme {{ $post->community_confirm_count }} · Falso/Risolto {{ $post->community_false_count }}
+                                </div>
+                                @if ($post->community_status === 'verified')
+                                    <span class="badge status-active" style="margin-top:5px;">Verificato</span>
+                                @elseif ($post->community_status === 'rejected')
+                                    <span class="badge status-removed" style="margin-top:5px;">Nascosto dalla Community</span>
+                                @endif
+                            @endif
+                        </td>
                         <td>{{ $post->sighting_date?->format('d/m/Y') }}</td>
                         <td><span class="badge status-{{ $post->status }}">{{ $post->status }}</span></td>
                         <td>{{ $post->expires_at?->format('d/m/Y H:i') }}</td>
@@ -100,7 +112,7 @@
         </table>
 
         <div class="pagination">
-            {{ $posts->links() }}
+            {{ $posts->links('admin._pagination') }}
         </div>
     </section>
 @endsection
