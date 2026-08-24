@@ -29,6 +29,9 @@ Route::view('/privacy', 'legal.privacy', [
 Route::view('/delete-account', 'legal.delete-account', [
     'contactEmail' => config('spoton.privacy.contact_email'),
 ])->name('delete-account');
+Route::get('/child-safety', fn () => view('legal.child-safety', [
+    'contactEmail' => config('spoton.child_safety.contact_email'),
+]))->name('child-safety');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');

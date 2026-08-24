@@ -20,7 +20,11 @@
     <h2>Richiesta via email</h2>
     <p>Se non riesci ad accedere all'app, scrivi dall'indirizzo associato all'account a <a href="mailto:{{ $contactEmail }}?subject=Richiesta%20eliminazione%20account%20SpotOn">{{ $contactEmail }}</a>. Potremo chiederti informazioni aggiuntive per verificare che l'account sia tuo.</p>
 
-    <p class="actions"><a href="{{ route('privacy') }}">Leggi la Privacy Policy</a></p>
+    <p class="actions">
+        <a href="{{ route('privacy') }}">Leggi la Privacy Policy</a>
+        &middot;
+        <a href="{{ route('child-safety') }}">Sicurezza dei minori</a>
+    </p>
 </main>
 </body>
 </html>

@@ -39,7 +39,11 @@
     <h2>Contatti</h2>
     <p>Per richieste relative alla privacy o ai propri dati: <a href="mailto:{{ $contactEmail }}">{{ $contactEmail }}</a>.</p>
 
-    <p class="actions"><a href="{{ route('delete-account') }}">Come cancellare l'account</a></p>
+    <p class="actions">
+        <a href="{{ route('delete-account') }}">Come cancellare l'account</a>
+        &middot;
+        <a href="{{ route('child-safety') }}">Sicurezza dei minori</a>
+    </p>
 </main>
 </body>
 </html>
