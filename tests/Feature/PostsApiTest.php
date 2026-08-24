@@ -328,7 +328,7 @@ class PostsApiTest extends TestCase
         Storage::disk('public')->assertMissing('post-audios/test.m4a');
     }
 
-    public function test_non_owner_cannot_update_post(): void
+    public function test_non_owner_cannot_update_or_remove_post(): void
     {
         $owner = User::factory()->create();
         $other = User::factory()->create();
@@ -346,6 +346,17 @@ class PostsApiTest extends TestCase
             ->actingAs($other, 'sanctum')
             ->patchJson("/api/posts/{$post->id}", ['text' => 'Modifica non autorizzata'])
             ->assertForbidden();
+
+        $this
+            ->actingAs($other, 'sanctum')
+            ->deleteJson("/api/posts/{$post->id}")
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('posts', [
+            'id' => $post->id,
+            'status' => 'active',
+            'text' => 'Testo owner',
+        ]);
     }
 
     private function location(): Location
