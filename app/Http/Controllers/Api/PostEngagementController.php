@@ -16,6 +16,32 @@ use Illuminate\Validation\Rule;
 
 class PostEngagementController extends Controller
 {
+    public function likes(Request $request, Post $post): JsonResponse
+    {
+        $perPage = min(max((int) $request->query('per_page', 25), 1), 50);
+        $likes = $post->likes()
+            ->with('user')
+            ->latest()
+            ->paginate($perPage);
+
+        return response()->json([
+            'message' => 'OK',
+            'data' => collect($likes->items())->map(fn (Like $like) => [
+                'id' => $like->user->id,
+                'display_name' => $like->user->display_name,
+                'avatar_color' => $like->user->avatar_color,
+                'avatar_url' => $like->user->avatar_url,
+                'liked_at' => $like->created_at?->toISOString(),
+            ])->values(),
+            'meta' => [
+                'current_page' => $likes->currentPage(),
+                'last_page' => $likes->lastPage(),
+                'per_page' => $likes->perPage(),
+                'total' => $likes->total(),
+            ],
+        ]);
+    }
+
     public function toggleLike(Request $request, Post $post): JsonResponse
     {
         $liked = DB::transaction(function () use ($request, $post): bool {

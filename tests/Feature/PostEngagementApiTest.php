@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Location;
+use App\Models\Like;
 use App\Models\Post;
 use App\Models\PresenceSession;
 use App\Models\User;
@@ -32,6 +33,43 @@ class PostEngagementApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.liked', false)
             ->assertJsonPath('data.like_count', 0);
+    }
+
+    public function test_authenticated_user_can_view_paginated_post_likes_without_sensitive_data(): void
+    {
+        $owner = User::factory()->create();
+        $viewer = User::factory()->create();
+        $likers = User::factory()->count(3)->create();
+        $post = $this->makePost($owner);
+
+        foreach ($likers as $liker) {
+            Like::query()->create([
+                'post_id' => $post->id,
+                'user_id' => $liker->id,
+            ]);
+        }
+
+        $response = $this
+            ->actingAs($viewer, 'sanctum')
+            ->getJson("/api/posts/{$post->id}/likes?per_page=2")
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.last_page', 2)
+            ->assertJsonPath('meta.total', 3)
+            ->assertJsonMissingPath('data.0.email')
+            ->assertJsonMissingPath('data.0.last_known_latitude');
+
+        $this->assertContains($response->json('data.0.id'), $likers->pluck('id')->all());
+    }
+
+    public function test_guest_cannot_view_post_likes(): void
+    {
+        $post = $this->makePost();
+
+        $this
+            ->getJson("/api/posts/{$post->id}/likes")
+            ->assertUnauthorized();
     }
 
     public function test_io_cero_owner_is_forbidden_and_other_user_can_toggle(): void
