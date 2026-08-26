@@ -8,6 +8,7 @@ use App\Http\Requests\Post\FeedPostsRequest;
 use App\Http\Requests\Post\NearbyPostsRequest;
 use App\Http\Requests\Post\StorePostRequest;
 use App\Http\Requests\Post\UpdatePostRequest;
+use App\Jobs\Push\SendPostMentionNotifications;
 use App\Models\Post;
 use App\Services\GeoDistance;
 use App\Services\PostAudioService;
@@ -16,6 +17,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 
 class PostController extends Controller
 {
@@ -180,12 +182,23 @@ class PostController extends Controller
 
     public function store(StorePostRequest $request, PostAudioService $postAudioService): JsonResponse
     {
+        $mentionUserIds = array_values(array_unique($request->validated('mention_user_ids', [])));
+        $mentionsEveryone = $request->boolean('mention_everyone');
+        $everyoneRateLimitKey = 'post-mention-everyone:'.$request->user()->id;
+
+        if ($mentionsEveryone && RateLimiter::tooManyAttempts($everyoneRateLimitKey, 2)) {
+            abort(429, 'Puoi usare @tutti al massimo due volte ogni 24 ore.');
+        }
+
         $post = Post::query()->create([
             ...$this->preparePostData($request->validated()),
             'author_id' => $request->user()->id,
+            'mentions_everyone' => $mentionsEveryone,
             'expires_at' => now()->addHours(48),
             'status' => 'active',
         ]);
+
+        $post->mentions()->sync($mentionUserIds);
 
         if ($request->hasFile('audio')) {
             $post->update($postAudioService->store(
@@ -195,7 +208,21 @@ class PostController extends Controller
             ));
         }
 
-        $post->refresh()->load(['author', 'location']);
+        if ($mentionsEveryone) {
+            RateLimiter::hit($everyoneRateLimitKey, 86400);
+        }
+
+        if ($mentionsEveryone || $mentionUserIds !== []) {
+            SendPostMentionNotifications::dispatch(
+                $post->id,
+                $request->user()->id,
+                $mentionUserIds,
+                $mentionsEveryone,
+                $mentionsEveryone,
+            );
+        }
+
+        $post->refresh()->load(['author', 'location', 'mentions']);
 
         return response()->json([
             'message' => 'OK',
@@ -294,6 +321,8 @@ class PostController extends Controller
             $data['audio_duration_seconds'],
             $data['location_password'],
             $data['remove_audio'],
+            $data['mention_user_ids'],
+            $data['mention_everyone'],
         );
 
         if (array_key_exists('song_quote', $data) && ! array_key_exists('musica', $data)) {

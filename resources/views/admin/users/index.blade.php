@@ -34,6 +34,7 @@
                     <th>Email</th>
                     <th>Ruolo</th>
                     <th>Stato</th>
+                    <th>@tutti</th>
                     <th>Post</th>
                     <th>Registrato</th>
                     <th style="text-align:right;">Azioni</th>
@@ -54,6 +55,16 @@
                                 {{ $user->is_suspended ? 'Sospeso' : 'Attivo' }}
                             </span>
                         </td>
+                        <td>
+                            <form method="post" action="{{ route('admin.users.update-mention-permission', $user) }}">
+                                @csrf
+                                @method('PATCH')
+                                <input name="can_mention_everyone" type="hidden" value="{{ $user->can_mention_everyone ? 0 : 1 }}">
+                                <button class="btn {{ $user->can_mention_everyone ? 'danger' : 'secondary' }}" type="submit">
+                                    {{ $user->can_mention_everyone ? 'Revoca' : 'Abilita' }}
+                                </button>
+                            </form>
+                        </td>
                         <td>{{ $user->posts_count }}</td>
                         <td>{{ $user->created_at?->format('d/m/Y H:i') }}</td>
                         <td>
@@ -71,7 +82,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7">Nessun utente trovato.</td>
+                        <td colspan="8">Nessun utente trovato.</td>
                     </tr>
                 @endforelse
             </tbody>

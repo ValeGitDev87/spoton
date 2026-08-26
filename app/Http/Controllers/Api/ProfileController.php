@@ -13,8 +13,10 @@ use App\Models\Like;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -49,17 +51,26 @@ class ProfileController extends Controller
     public function searchUsers(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'query' => ['required', 'string', 'min:1', 'max:120'],
+            'query' => ['sometimes', 'nullable', 'string', 'max:120'],
             'page' => ['sometimes', 'integer', 'min:1'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:30'],
         ]);
+        $query = trim((string) ($data['query'] ?? ''));
         $perPage = (int) ($data['per_page'] ?? 20);
+        $interactionScores = $this->interactionScoresQuery($request->user()->id);
         $users = User::query()
-            ->where('id', '!=', $request->user()->id)
-            ->where('is_admin', false)
-            ->where('is_suspended', false)
-            ->where('display_name', 'like', '%'.$data['query'].'%')
-            ->orderBy('display_name')
+            ->leftJoinSub($interactionScores, 'interaction_scores', function ($join): void {
+                $join->on('interaction_scores.target_user_id', '=', 'users.id');
+            })
+            ->select('users.*')
+            ->selectRaw('COALESCE(interaction_scores.interaction_score, 0) AS interaction_score')
+            ->where('users.id', '!=', $request->user()->id)
+            ->where('users.is_admin', false)
+            ->where('users.is_suspended', false)
+            ->when($query !== '', fn (Builder $builder) => $builder
+                ->whereRaw('LOWER(users.display_name) LIKE ?', ['%'.mb_strtolower($query).'%']))
+            ->orderByDesc('interaction_score')
+            ->orderBy('users.display_name')
             ->paginate($perPage);
 
         return response()->json([
@@ -83,10 +94,63 @@ class ProfileController extends Controller
     {
         abort_if($user->is_admin || $user->is_suspended, 404);
 
+        $isFavorite = Favorite::query()
+            ->where('owner_id', $request->user()->id)
+            ->where('target_user_id', $user->id)
+            ->exists();
+
         return response()->json([
             'message' => 'OK',
-            'data' => $this->publicUserProfilePayload($user),
+            'data' => $this->publicUserProfilePayload($user) + [
+                'is_favorite' => $isFavorite,
+            ],
         ]);
+    }
+
+    private function interactionScoresQuery(string $viewerId): QueryBuilder
+    {
+        $favorites = DB::table('favorites')
+            ->selectRaw('target_user_id, 30 AS weight')
+            ->where('owner_id', $viewerId)
+            ->whereNotNull('target_user_id');
+        $chatsAsFirstUser = DB::table('chats')
+            ->selectRaw('user_two_id AS target_user_id, 10 AS weight')
+            ->where('user_one_id', $viewerId);
+        $chatsAsSecondUser = DB::table('chats')
+            ->selectRaw('user_one_id AS target_user_id, 10 AS weight')
+            ->where('user_two_id', $viewerId);
+        $messagesAsFirstUser = DB::table('messages')
+            ->join('chats', 'chats.id', '=', 'messages.chat_id')
+            ->selectRaw('chats.user_two_id AS target_user_id, 1 AS weight')
+            ->where('chats.user_one_id', $viewerId);
+        $messagesAsSecondUser = DB::table('messages')
+            ->join('chats', 'chats.id', '=', 'messages.chat_id')
+            ->selectRaw('chats.user_one_id AS target_user_id, 1 AS weight')
+            ->where('chats.user_two_id', $viewerId);
+        $likes = DB::table('likes')
+            ->join('posts', 'posts.id', '=', 'likes.post_id')
+            ->selectRaw('posts.author_id AS target_user_id, 3 AS weight')
+            ->where('likes.user_id', $viewerId)
+            ->whereColumn('posts.author_id', '!=', 'likes.user_id');
+        $comments = DB::table('comments')
+            ->join('posts', 'posts.id', '=', 'comments.post_id')
+            ->selectRaw('posts.author_id AS target_user_id, 4 AS weight')
+            ->where('comments.author_id', $viewerId)
+            ->whereColumn('posts.author_id', '!=', 'comments.author_id');
+
+        $interactions = $favorites
+            ->unionAll($chatsAsFirstUser)
+            ->unionAll($chatsAsSecondUser)
+            ->unionAll($messagesAsFirstUser)
+            ->unionAll($messagesAsSecondUser)
+            ->unionAll($likes)
+            ->unionAll($comments);
+
+        return DB::query()
+            ->fromSub($interactions, 'interactions')
+            ->select('target_user_id')
+            ->selectRaw('SUM(weight) AS interaction_score')
+            ->groupBy('target_user_id');
     }
 
     public function karma(Request $request): JsonResponse

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -28,6 +29,7 @@ class Post extends Model
         'audio_duration_seconds',
         'sighting_date',
         'is_anonymous',
+        'mentions_everyone',
         'secret_question',
         'secret_answer_hash',
         'expires_at',
@@ -51,6 +53,7 @@ class Post extends Model
         return [
             'sighting_date' => 'date',
             'is_anonymous' => 'boolean',
+            'mentions_everyone' => 'boolean',
             'expires_at' => 'datetime',
             'like_count' => 'integer',
             'comment_count' => 'integer',
@@ -87,6 +90,11 @@ class Post extends Model
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class);
+    }
+
+    public function mentions(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'post_mentions')->withTimestamps();
     }
 
     public function communityVotes(): HasMany

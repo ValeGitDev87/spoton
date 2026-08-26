@@ -57,4 +57,22 @@ class UserController extends Controller
 
         return back()->with('status', $suspended ? 'Utente sospeso.' : 'Utente riattivato.');
     }
+
+    public function updateMentionPermission(Request $request, User $user): RedirectResponse
+    {
+        $data = $request->validate([
+            'can_mention_everyone' => ['required', 'boolean'],
+        ]);
+
+        $user->update([
+            'can_mention_everyone' => (bool) $data['can_mention_everyone'],
+        ]);
+
+        return back()->with(
+            'status',
+            $user->can_mention_everyone
+                ? 'Permesso @tutti abilitato.'
+                : 'Permesso @tutti revocato.',
+        );
+    }
 }

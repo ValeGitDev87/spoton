@@ -53,6 +53,22 @@ class AdminLocationsWebTest extends TestCase
             ->assertSee('14.2193000');
     }
 
+    public function test_admin_location_form_contains_the_supported_macro_categories(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)
+            ->get('/admin/locations/create')
+            ->assertOk()
+            ->assertSee('value="metro"', false)
+            ->assertSee('value="bus"', false)
+            ->assertSee('value="ristorante"', false)
+            ->assertSee('value="bar"', false)
+            ->assertSee('value="universita"', false)
+            ->assertSee('value="locale"', false)
+            ->assertSee('value="discoteca"', false);
+    }
+
     public function test_admin_can_create_location_from_web_form(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

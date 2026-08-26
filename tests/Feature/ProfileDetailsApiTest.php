@@ -110,9 +110,14 @@ class ProfileDetailsApiTest extends TestCase
 
         $this
             ->actingAs($user, 'sanctum')
-            ->deleteJson('/api/favorites/Nome%20Aggiornato')
+            ->deleteJson("/api/favorites/users/{$target->id}")
             ->assertOk()
             ->assertJsonPath('data.removed', true);
+
+        $this->assertDatabaseMissing('favorites', [
+            'owner_id' => $user->id,
+            'target_user_id' => $target->id,
+        ]);
     }
 
     private function makePost(

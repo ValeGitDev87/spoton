@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Post;
 
 use App\Models\Location;
+use App\Models\User;
 use App\Support\PostCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,6 +29,15 @@ class StorePostRequest extends FormRequest
             'audio_duration_seconds' => ['required_with:audio', 'nullable', 'numeric', 'min:0.1', 'max:10'],
             'sighting_date' => ['required', 'date', 'before_or_equal:today'],
             'is_anonymous' => ['sometimes', 'boolean'],
+            'mention_user_ids' => ['sometimes', 'array', 'max:10'],
+            'mention_user_ids.*' => [
+                'uuid',
+                'distinct',
+                Rule::exists('users', 'id')->where(fn ($query) => $query
+                    ->where('is_admin', false)
+                    ->where('is_suspended', false)),
+            ],
+            'mention_everyone' => ['sometimes', 'boolean'],
             'secret_question' => ['nullable', 'string', 'max:500', 'required_with:secret_answer'],
             'secret_answer' => ['nullable', 'string', 'max:255', 'required_with:secret_question'],
         ];
@@ -48,6 +58,8 @@ class StorePostRequest extends FormRequest
                         'La domanda di verifica e disponibile solo per Spotted / Amore.',
                     );
                 }
+
+                $this->validateMentions($validator);
 
                 if ($validator->errors()->has('location_id')) {
                     return;
@@ -73,5 +85,66 @@ class StorePostRequest extends FormRequest
                 );
             },
         ];
+    }
+
+    private function validateMentions(Validator $validator): void
+    {
+        $text = (string) $this->input('text', '');
+        $mentionUserIds = array_values(array_unique(array_filter(
+            (array) $this->input('mention_user_ids', []),
+            'is_string',
+        )));
+        $mentionsEveryone = $this->boolean('mention_everyone');
+        $containsEveryone = preg_match('/(^|\s)@tutti(?![\p{L}\p{N}_])/iu', $text) === 1;
+
+        if ($containsEveryone && ! $this->user()?->can_mention_everyone) {
+            $validator->errors()->add('text', 'Non sei autorizzato a usare @tutti.');
+        }
+
+        if ($mentionsEveryone && ! $this->user()?->can_mention_everyone) {
+            $validator->errors()->add('mention_everyone', 'Non sei autorizzato a menzionare tutti.');
+        }
+
+        if ($mentionsEveryone && ! $containsEveryone) {
+            $validator->errors()->add('mention_everyone', 'Inserisci @tutti nel testo dell’annuncio.');
+        }
+
+        if ($containsEveryone && $this->user()?->can_mention_everyone && ! $mentionsEveryone) {
+            $validator->errors()->add('mention_everyone', 'Seleziona @tutti dai suggerimenti.');
+        }
+
+        if ($mentionUserIds === [] || $validator->errors()->has('mention_user_ids')) {
+            return;
+        }
+
+        $users = User::query()
+            ->whereIn('id', $mentionUserIds)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($mentionUserIds as $userId) {
+            if ($userId === $this->user()?->id) {
+                $validator->errors()->add('mention_user_ids', 'Non puoi taggare te stesso.');
+
+                continue;
+            }
+
+            $mentionedUser = $users->get($userId);
+
+            if (! $mentionedUser || ! $this->textContainsMention($text, $mentionedUser->display_name)) {
+                $validator->errors()->add(
+                    'mention_user_ids',
+                    'Ogni persona selezionata deve comparire nel testo con la chiocciola.',
+                );
+            }
+        }
+    }
+
+    private function textContainsMention(string $text, string $displayName): bool
+    {
+        return preg_match(
+            '/(^|\s)@'.preg_quote(trim($displayName), '/').'(?![\p{L}\p{N}_])/iu',
+            $text,
+        ) === 1;
     }
 }

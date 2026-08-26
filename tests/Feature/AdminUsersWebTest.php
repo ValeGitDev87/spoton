@@ -58,4 +58,26 @@ class AdminUsersWebTest extends TestCase
             'suspension_reason' => null,
         ]);
     }
+
+    public function test_admin_can_grant_and_revoke_the_everyone_mention_permission(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $user = User::factory()->create(['can_mention_everyone' => false]);
+
+        $this->actingAs($admin)
+            ->patch("/admin/users/{$user->id}/mention-permission", [
+                'can_mention_everyone' => true,
+            ])
+            ->assertRedirect();
+
+        $this->assertTrue($user->refresh()->can_mention_everyone);
+
+        $this->actingAs($admin)
+            ->patch("/admin/users/{$user->id}/mention-permission", [
+                'can_mention_everyone' => false,
+            ])
+            ->assertRedirect();
+
+        $this->assertFalse($user->refresh()->can_mention_everyone);
+    }
 }

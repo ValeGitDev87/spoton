@@ -29,8 +29,20 @@
     <div class="field">
         <label for="type">Tipo</label>
         <select id="type" name="type" required>
-            @foreach (['metro', 'bar', 'ristorante', 'piazza', 'lungomare', 'parco', 'altro'] as $type)
-                <option value="{{ $type }}" @selected(old('type', $location->type) === $type)>{{ ucfirst($type) }}</option>
+            @foreach ([
+                'metro' => 'Metropolitana',
+                'bus' => 'Bus',
+                'ristorante' => 'Ristorante',
+                'bar' => 'Bar',
+                'universita' => 'Universita',
+                'locale' => 'Locale',
+                'discoteca' => 'Discoteca',
+                'piazza' => 'Piazza',
+                'lungomare' => 'Lungomare',
+                'parco' => 'Parco',
+                'altro' => 'Altro',
+            ] as $type => $label)
+                <option value="{{ $type }}" @selected(old('type', $location->type) === $type)>{{ $label }}</option>
             @endforeach
         </select>
     </div>

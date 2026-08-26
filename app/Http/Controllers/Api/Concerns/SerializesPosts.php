@@ -11,7 +11,7 @@ trait SerializesPosts
 
     private function postPayload(Post $post, User $viewer, ?float $distanceKm = null, bool $detail = false): array
     {
-        $post->loadMissing(['author', 'location', 'communityVotes']);
+        $post->loadMissing(['author', 'location', 'communityVotes', 'mentions']);
         $isOwner = $post->author_id === $viewer->id;
         $canSeeAuthor = ! $post->is_anonymous || $isOwner || $viewer->is_admin;
 
@@ -32,6 +32,13 @@ trait SerializesPosts
             ],
             'location' => $this->locationPayload($post->location),
             'text' => $post->text,
+            'mentions' => $post->mentions->map(fn (User $user) => [
+                'id' => $user->id,
+                'display_name' => $user->display_name,
+                'avatar_color' => $user->avatar_color,
+                'avatar_url' => $user->avatar_url,
+            ])->values(),
+            'mentions_everyone' => (bool) $post->mentions_everyone,
             'category' => $post->category,
             'musica' => $post->musica,
             'song_quote' => $post->song_quote ?? $post->musica,

@@ -55,6 +55,7 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
 
     Route::get('/favorites', [FavoriteController::class, 'index']);
     Route::post('/favorites', [FavoriteController::class, 'store']);
+    Route::delete('/favorites/users/{user}', [FavoriteController::class, 'destroyUser']);
     Route::delete('/favorites/{targetName}', [FavoriteController::class, 'destroy']);
 
     Route::get('/chats', [ChatController::class, 'index']);

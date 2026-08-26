@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Favorite;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -63,5 +64,53 @@ class PublicProfileApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.id', $match->id)
             ->assertJsonMissing(['email' => 'sara-secret@example.com']);
+    }
+
+    public function test_people_search_without_query_is_ranked_by_interactions_and_paginated(): void
+    {
+        $viewer = User::factory()->create();
+        $alphabeticalFirst = User::factory()->create(['display_name' => 'Anna Nessuna Interazione']);
+        $favorite = User::factory()->create(['display_name' => 'Zara Preferita']);
+        User::factory()->create(['display_name' => 'Mario Generico']);
+
+        Favorite::query()->create([
+            'owner_id' => $viewer->id,
+            'target_user_id' => $favorite->id,
+            'target_name' => $favorite->display_name,
+        ]);
+
+        $response = $this->actingAs($viewer, 'sanctum')
+            ->getJson('/api/users/search?per_page=2');
+
+        $response
+            ->assertOk()
+            ->assertJsonCount(2, 'data')
+            ->assertJsonPath('data.0.id', $favorite->id)
+            ->assertJsonPath('data.1.id', $alphabeticalFirst->id)
+            ->assertJsonPath('meta.current_page', 1)
+            ->assertJsonPath('meta.last_page', 2)
+            ->assertJsonPath('meta.total', 3);
+    }
+
+    public function test_public_profile_reports_favorite_state(): void
+    {
+        $viewer = User::factory()->create();
+        $target = User::factory()->create();
+
+        $this->actingAs($viewer, 'sanctum')
+            ->getJson("/api/users/{$target->id}/public-profile")
+            ->assertOk()
+            ->assertJsonPath('data.is_favorite', false);
+
+        Favorite::query()->create([
+            'owner_id' => $viewer->id,
+            'target_user_id' => $target->id,
+            'target_name' => $target->display_name,
+        ]);
+
+        $this->actingAs($viewer, 'sanctum')
+            ->getJson("/api/users/{$target->id}/public-profile")
+            ->assertOk()
+            ->assertJsonPath('data.is_favorite', true);
     }
 }

@@ -26,6 +26,7 @@ trait SerializesUsers
             'auth_provider' => $user->auth_provider ?? 'email',
             'email_verified' => $user->hasVerifiedEmail(),
             'is_admin' => $user->is_admin,
+            'can_mention_everyone' => (bool) $user->can_mention_everyone,
             'is_suspended' => (bool) $user->is_suspended,
         ];
     }

@@ -115,6 +115,21 @@ class FavoriteController extends Controller
         ]);
     }
 
+    public function destroyUser(Request $request, User $user): JsonResponse
+    {
+        $deleted = Favorite::query()
+            ->where('owner_id', $request->user()->id)
+            ->where('target_user_id', $user->id)
+            ->delete();
+
+        return response()->json([
+            'message' => 'OK',
+            'data' => [
+                'removed' => $deleted > 0,
+            ],
+        ]);
+    }
+
     private function favoritePayload(Favorite $favorite): array
     {
         return [
