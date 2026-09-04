@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use App\Contracts\PostShareVideoRenderer;
 use App\Contracts\PushGateway;
 use App\Models\Post;
 use App\Models\User;
+use App\Observers\PostObserver;
+use App\Services\Media\FfmpegPostShareVideoRenderer;
 use App\Services\Push\ExpoPushGateway;
 use App\Services\Push\LogPushGateway;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -23,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PushGateway::class, fn () => config('services.push.driver') === 'expo'
             ? new ExpoPushGateway
             : new LogPushGateway);
+        $this->app->bind(PostShareVideoRenderer::class, FfmpegPostShareVideoRenderer::class);
     }
 
     /**
@@ -34,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
             'post' => Post::class,
             'user' => User::class,
         ]);
+        Post::observe(PostObserver::class);
 
         $key = fn (Request $request): string => (string) ($request->user()?->id ?? $request->ip());
 
@@ -45,5 +50,6 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('challenge-answers', fn (Request $request) => Limit::perHour(5)->by($key($request)));
         RateLimiter::for('counterproposals', fn (Request $request) => Limit::perHour(5)->by($key($request)));
         RateLimiter::for('reports', fn (Request $request) => Limit::perHour(10)->by($key($request)));
+        RateLimiter::for('locations-create', fn (Request $request) => Limit::perHour(10)->by($key($request)));
     }
 }

@@ -19,11 +19,12 @@ class PresenceController extends Controller
     {
         $lat = (float) $request->validated('lat');
         $lng = (float) $request->validated('lng');
+        $accuracy = $request->validated('accuracy');
         $user = $request->user();
         $now = now();
 
         $locations = Location::query()
-            ->where('is_active', true)
+            ->publiclyVisible()
             ->get()
             ->map(function (Location $location) use ($lat, $lng): array {
                 $distanceKm = GeoDistance::kilometers(
@@ -45,10 +46,11 @@ class PresenceController extends Controller
             ->pluck('model.id')
             ->values();
 
-        DB::transaction(function () use ($user, $lat, $lng, $now, $insideLocationIds): void {
+        DB::transaction(function () use ($user, $lat, $lng, $accuracy, $now, $insideLocationIds): void {
             $user->update([
                 'last_known_latitude' => $lat,
                 'last_known_longitude' => $lng,
+                'last_location_accuracy_meters' => $accuracy !== null ? (int) ceil((float) $accuracy) : null,
                 'last_location_update' => $now,
             ]);
 

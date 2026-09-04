@@ -19,7 +19,16 @@ class StorePostRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'location_id' => ['required', 'uuid', 'exists:locations,id'],
+            'location_id' => [
+                'required',
+                'uuid',
+                Rule::exists('locations', 'id')->where(fn ($query) => $query
+                    ->where('is_active', true)
+                    ->whereIn('moderation_status', [
+                        Location::MODERATION_PENDING,
+                        Location::MODERATION_APPROVED,
+                    ])),
+            ],
             'location_password' => ['nullable', 'string', 'max:255'],
             'text' => ['required', 'string', 'min:3', 'max:2000'],
             'category' => ['sometimes', 'string', Rule::in(PostCategory::values())],

@@ -45,6 +45,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'suspension_reason',
         'last_known_latitude',
         'last_known_longitude',
+        'last_location_accuracy_meters',
         'last_location_update',
     ];
 
@@ -74,6 +75,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'show_favorite_song' => 'boolean',
             'karma' => 'integer',
             'last_location_update' => 'datetime',
+            'last_location_accuracy_meters' => 'integer',
             'password' => 'hashed',
         ];
     }
@@ -96,6 +98,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function presenceSessions(): HasMany
     {
         return $this->hasMany(PresenceSession::class);
+    }
+
+    public function createdLocations(): HasMany
+    {
+        return $this->hasMany(Location::class, 'created_by_user_id');
     }
 
     public function sentMessages(): HasMany

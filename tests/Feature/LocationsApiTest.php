@@ -41,6 +41,8 @@ class LocationsApiTest extends TestCase
             ->assertJsonPath('data.0.city', 'Napoli')
             ->assertJsonPath('data.0.icon', 'location-outline')
             ->assertJsonPath('data.0.icon_library', 'ionicons')
+            ->assertJsonPath('data.0.tier', Location::TIER_PARTNER)
+            ->assertJsonPath('data.0.is_partner', true)
             ->assertJsonPath('data.0.is_locked', false);
     }
 

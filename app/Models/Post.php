@@ -102,6 +102,11 @@ class Post extends Model
         return $this->hasMany(PostCommunityVote::class);
     }
 
+    public function shareMedia(): HasMany
+    {
+        return $this->hasMany(PostShareMedia::class);
+    }
+
     public function challenges(): HasMany
     {
         return $this->hasMany(Challenge::class);

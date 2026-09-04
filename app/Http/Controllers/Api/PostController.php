@@ -109,7 +109,7 @@ class PostController extends Controller
             ->with(['author', 'location', 'communityVotes'])
             ->where('status', 'active')
             ->where('expires_at', '>', Carbon::now())
-            ->whereHas('location', fn (Builder $query) => $query->where('is_active', true))
+            ->whereHas('location', fn (Builder $query) => $query->publiclyVisible())
             ->latest()
             ->get()
             ->map(function (Post $post) use ($lat, $lng): array {
@@ -284,7 +284,7 @@ class PostController extends Controller
             ->with(['author', 'location', 'communityVotes'])
             ->where('status', 'active')
             ->where('expires_at', '>', Carbon::now())
-            ->whereHas('location', fn (Builder $query) => $query->where('is_active', true))
+            ->whereHas('location', fn (Builder $query) => $query->publiclyVisible())
             ->when($request->query('location_id'), fn (Builder $query, string $locationId) => $query->where('location_id', $locationId))
             ->when($request->query('search'), function (Builder $query, string $search): void {
                 $query->where(function (Builder $inner) use ($search): void {

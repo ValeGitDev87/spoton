@@ -20,6 +20,33 @@
     </div>
 </div>
 
+<div class="grid">
+    <div class="field">
+        <label for="tier">Gestione luogo</label>
+        <select id="tier" name="tier" required>
+            <option value="partner" @selected(old('tier', $location->tier ?? 'partner') === 'partner')>Partner</option>
+            <option value="community" @selected(old('tier', $location->tier) === 'community')>Community</option>
+        </select>
+        <small class="field-help">I luoghi creati da questo pannello sono Partner per impostazione predefinita.</small>
+    </div>
+
+    <div class="field">
+        <label for="moderation_status">Moderazione</label>
+        <select id="moderation_status" name="moderation_status" required>
+            <option value="approved" @selected(old('moderation_status', $location->moderation_status ?? 'approved') === 'approved')>Approvato</option>
+            <option value="pending" @selected(old('moderation_status', $location->moderation_status) === 'pending')>Da controllare</option>
+            <option value="rejected" @selected(old('moderation_status', $location->moderation_status) === 'rejected')>Respinto</option>
+            <option value="suspended" @selected(old('moderation_status', $location->moderation_status) === 'suspended')>Sospeso</option>
+        </select>
+    </div>
+</div>
+
+@if ($location->exists && $location->creator)
+    <div class="alert">
+        Creato dalla community: {{ $location->creator->display_name }} ({{ $location->creator->email }}).
+    </div>
+@endif
+
 <div class="grid3">
     <div class="field">
         <label for="city">Citta</label>
@@ -72,16 +99,23 @@
         });
 
         const locationLock = document.getElementById('is_locked');
+        const locationTier = document.getElementById('tier');
         const accessPasswordField = document.getElementById('access-password-field');
         const accessPassword = document.getElementById('access_password');
 
         function syncLocationLock() {
+            const isCommunity = locationTier.value === 'community';
+            if (isCommunity) {
+                locationLock.checked = false;
+            }
+            locationLock.disabled = isCommunity;
             accessPasswordField.hidden = !locationLock.checked;
             accessPassword.required = locationLock.checked
                 && accessPassword.dataset.hasPassword !== '1';
         }
 
         locationLock.addEventListener('change', syncLocationLock);
+        locationTier.addEventListener('change', syncLocationLock);
         syncLocationLock();
     </script>
 @endpush
@@ -102,6 +136,14 @@
         <input id="geo_radius_meters" name="geo_radius_meters" type="number" min="1" max="200000" value="{{ old('geo_radius_meters', $location->geo_radius_meters ?? 100) }}" required>
     </div>
 </div>
+
+@if ($location->exists)
+    <div class="field">
+        <label for="moderation_note">Nota moderazione</label>
+        <textarea id="moderation_note" maxlength="1000" name="moderation_note" rows="3">{{ old('moderation_note', $location->moderation_note) }}</textarea>
+        <small class="field-help">La nota e visibile all'utente che ha proposto il luogo.</small>
+    </div>
+@endif
 
 <div class="grid">
     <div>

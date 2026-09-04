@@ -223,6 +223,7 @@
             <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">Utenti</a>
             <a class="nav-link {{ request()->routeIs('admin.posts.*') ? 'active' : '' }}" href="{{ route('admin.posts.index') }}">Post</a>
             <a class="nav-link {{ request()->routeIs('admin.reports.*') ? 'active' : '' }}" href="{{ route('admin.reports.index') }}">Segnalazioni</a>
+            <a class="nav-link {{ request()->routeIs('admin.expired-media.*') ? 'active' : '' }}" href="{{ route('admin.expired-media.index') }}">Media scaduti</a>
             <a class="nav-link {{ request()->routeIs('admin.backups.*') ? 'active' : '' }}" href="{{ route('admin.backups.index') }}">Backup</a>
         </aside>
         <main class="content">

@@ -1,6 +1,6 @@
 # SpotOn - TODO E Stato Progetto
 
-Ultimo aggiornamento: 3 agosto 2026.
+Ultimo aggiornamento: 2 settembre 2026.
 
 Questo file e' il riferimento operativo da aggiornare dopo ogni blocco, test locale e verifica VPS.
 
@@ -63,6 +63,63 @@ Stato: completato localmente; attende commit/push e verifica VPS.
 - [x] Pagine pubbliche `/privacy` e `/delete-account`.
 - [x] Test automatici Blocco 2: suite completa 95 test, 462 assertion.
 - [x] Aggiornamento documentazione API/flow.
+
+## Backend - Luoghi Community
+
+Stato: completato localmente; attende commit/push, migration VPS e frontend Expo.
+
+- [x] Tutti i luoghi preesistenti migrati come `partner/approved`.
+- [x] I luoghi creati dal pannello admin restano Partner per impostazione predefinita.
+- [x] Endpoint utente `POST /api/locations` limitato ai soli campi Community.
+- [x] Email verificata, posizione recente, precisione GPS e distanza massima obbligatorie.
+- [x] Limite di 3 luoghi creati nelle ultime 24 ore.
+- [x] Controllo duplicati entro 150 metri con endpoint di anteprima.
+- [x] Icona e raggio assegnati dal backend in base alla categoria.
+- [x] Endpoint paginato `GET /api/locations/mine` con stato e nota moderazione.
+- [x] Moderazione admin `pending`, `approved`, `rejected`, `suspended`.
+- [x] Luoghi respinti o sospesi esclusi da elenco, presenza, mappa, storie e post.
+- [x] Portale admin aggiornato con tipo gestione, moderazione e creatore.
+- [x] Suite completa: 162 test, 952 assertion.
+- [ ] Frontend Expo: schermata aggiunta luogo e invio precisione GPS.
+- [ ] Deploy e collaudo VPS.
+
+## Traduzioni Errori API
+
+Stato: completato localmente; attende deploy VPS.
+
+- [x] Locale Laravel italiano applicato a API, portale e reset password.
+- [x] Tradotte tutte le regole standard di validazione Laravel.
+- [x] Aggiunti nomi italiani per i campi tecnici usati dalle API.
+- [x] Forgot password verificato con email vuota e non valida.
+- [x] Frontend aggiornato per mostrare il primo errore specifico dei `422`.
+- [x] Fallback frontend italiani per `401`, `403`, `404`, `409`, `419`, `422`, `429`, `500` e `503`.
+- [x] Suite completa: 165 test, 967 assertion; TypeScript OK; Expo Doctor 18/18.
+
+## Audio Share Lite
+
+Stato: blocchi A, B e C completati localmente; build native, deploy e benchmark VPS da eseguire in modo controllato.
+
+- [x] Video MP4 verticale `720x1280`, H.264/AAC, massimo 10 secondi e template `v1`.
+- [x] Job FFmpeg asincrono sulla coda Redis `media`, lock atomico e timeout.
+- [x] Un solo file per post/versione, riuso cache e limite di 3 nuove generazioni ogni 24 ore.
+- [x] Feature flag `SPOTON_SHARE_VIDEO_ENABLED`, disattivato per default.
+- [x] API `POST/GET /api/posts/{post}/share-video` con stati `200/202/404/422/429/503`.
+- [x] Download video tramite route controllata; il file non e raggiungibile dopo la scadenza.
+- [x] Invalidazione dopo modifica/rimozione del post e cancellazione dell'account.
+- [x] Sezione admin `Media scaduti` con riepilogo, conferma e pulizia manuale selettiva.
+- [x] Pagina pubblica e deep link `/l/{location}` web, Android App Links e Apple Universal Links.
+- [x] Card Open Graph `1200x630` in cache con fallback statico e protezione identita Ghost.
+- [x] Bottom sheet mobile con link, copia, generazione/condivisione video e salvataggio esplicito.
+- [x] Polling limitato, messaggi offline/errore e avviso privacy prima dell'esportazione.
+- [x] Dipendenze Expo compatibili con SDK 54 verificate: `expo-sharing`, `expo-media-library`, `expo-file-system`, `expo-clipboard`.
+- [x] Suite Laravel completa: 184 test, 1057 assertion.
+- [x] TypeScript senza errori e dipendenze Expo allineate a SDK 54.
+- [ ] Installare/verificare FFmpeg e GD sulla VPS.
+- [ ] Configurare un solo worker Supervisor per la coda `media`.
+- [ ] Deploy iniziale con feature flag `false`, test API e render demo.
+- [ ] Benchmark VPS con 1 e 10 render mentre feed, chat e push restano attivi.
+- [ ] Nuova build Android e iOS, quindi collaudo reale del foglio di condivisione e galleria.
+- [ ] Attivazione graduale solo se il benchmark non mostra rallentamenti.
 
 ## Verifica VPS Backend
 

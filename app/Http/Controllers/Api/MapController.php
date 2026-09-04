@@ -20,7 +20,7 @@ class MapController extends Controller
         $radiusKm = (float) ($request->validated('radius_km') ?? 200);
 
         $locations = Location::query()
-            ->where('is_active', true)
+            ->publiclyVisible()
             ->get()
             ->map(function (Location $location) use ($lat, $lng): array {
                 $distanceKm = GeoDistance::kilometers(

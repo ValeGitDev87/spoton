@@ -20,6 +20,11 @@
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
     <meta property="og:image:alt" content="SpotOn">
+    @if ($audioUrl)
+        <meta property="og:audio" content="{{ $audioUrl }}">
+        <meta property="og:audio:secure_url" content="{{ $audioUrl }}">
+        <meta property="og:audio:type" content="{{ $post->audio_mime ?: 'audio/mp4' }}">
+    @endif
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $title }}">
@@ -102,6 +107,7 @@
         }
         .unavailable p { color: #667085; line-height: 1.5; margin: 10px 0 0; }
         .footer-note { color: #667085; font-size: 13px; line-height: 1.5; margin: 20px auto 0; max-width: 520px; text-align: center; }
+        .location-link { align-items: center; background: #fff; border: 1px solid #d0d5dd; border-radius: 7px; color: #111827; display: flex; font-size: 14px; font-weight: 750; justify-content: center; margin-top: 18px; min-height: 46px; padding: 10px 14px; text-decoration: none; }
         @media (max-width: 420px) {
             header { min-height: 62px; padding: 10px 14px; }
             .brand { font-size: 18px; }
@@ -159,6 +165,8 @@
                     </div>
                 </div>
             </article>
+
+            <a class="location-link" href="{{ $locationUrl }}">Vedi la bacheca di questo luogo</a>
 
             @if ($post->category === \App\Support\PostCategory::WEATHER_TRANSPORT)
                 <p class="footer-note">

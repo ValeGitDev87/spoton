@@ -636,3 +636,79 @@ Nota push:
 - la logica backend e completa;
 - mantenere `PUSH_DRIVER=log` fino alla configurazione Firebase/APNs ed EAS;
 - il test reale su dispositivo resta intenzionalmente nell'ultimo step del progetto.
+
+---
+
+## Luoghi Community E Partner
+
+Stato: backend completato localmente il 28 agosto 2026.
+
+Regole:
+
+- tutti i luoghi esistenti sono migrati come `partner/approved`;
+- i luoghi creati manualmente dall'admin sono Partner per impostazione predefinita;
+- gli utenti verificati creano esclusivamente luoghi Community;
+- il backend assegna icona, raggio, stato, blocco e proprieta amministrative;
+- posizione aggiornata negli ultimi 10 minuti, precisione entro 100 metri e distanza massima di 1 km;
+- massimo 3 creazioni riuscite nelle ultime 24 ore;
+- duplicati controllati entro 150 metri;
+- i nuovi luoghi Community sono attivi ma `pending`, quindi utilizzabili mentre attendono il controllo;
+- respinti e sospesi vengono esclusi da tutte le API pubbliche collegate.
+
+API:
+
+```text
+POST  /api/presence/ping
+POST  /api/locations
+GET   /api/locations/duplicates
+GET   /api/locations/mine
+PATCH /api/admin/locations/{location}/moderation
+```
+
+Il `presence/ping` accetta anche `accuracy`, espressa in metri. Il frontend non deve mostrare campi numerici per latitudine e longitudine: li invia automaticamente dopo il consenso GPS.
+
+Verifiche locali:
+
+- `vendor/bin/pint --dirty` OK;
+- `php artisan test --compact` OK: 162 test, 952 assertion.
+
+---
+
+## Audio Share Lite - 2 settembre 2026
+
+Stato: implementato localmente; feature disattivata per default in attesa di deploy e benchmark.
+
+Incluso:
+
+- tabella `post_share_media` con vincolo unico post/template;
+- render MP4 asincrono FFmpeg su coda Redis `media`;
+- riuso del file, lock atomico, limite giornaliero e cleanup temporanei;
+- URL video controllato che diventa indisponibile alla scadenza;
+- sezione admin `/admin/expired-media` per pulizia manuale;
+- pagina pubblica luogo `/l/{location}` e CTA dalla pagina `/p/{post}`;
+- Open Graph con card `1200x630` in cache e fallback;
+- protezione dei post Ghost, senza coordinate o identita reale nei media pubblici.
+
+API:
+
+- `POST /api/posts/{post}/share-video`
+- `GET /api/posts/{post}/share-video`
+- `GET /api/locations/{location}`
+
+Route web:
+
+- `GET /l/{location}`
+- `GET /media/share/{media}`
+- `GET /admin/expired-media`
+- `POST /admin/expired-media/purge`
+
+Migration:
+
+- `2026_09_02_000100_create_post_share_media_table`
+
+Verifiche locali:
+
+- test mirati Audio Share/deep link/account: 26 test, 134 assertion;
+- suite Laravel completa: 184 test, 1057 assertion;
+- formatter Pint sui file coinvolti: OK;
+- render FFmpeg reale rinviato alla VPS perche il binario non e installato sul Mac.

@@ -15,6 +15,8 @@ class StoryController extends Controller
 
     public function index(Request $request, Location $location): JsonResponse
     {
+        abort_unless($location->isPubliclyVisible(), 404);
+
         $posts = Post::query()
             ->with(['author', 'location', 'communityVotes'])
             ->where('location_id', $location->id)

@@ -19,7 +19,7 @@ class AppLinkAssociationController extends Controller
                 'apps' => [],
                 'details' => [[
                     'appID' => "{$teamId}.{$bundleIdentifier}",
-                    'paths' => ['/p/*'],
+                    'paths' => ['/p/*', '/l/*'],
                 ]],
             ],
         ]);

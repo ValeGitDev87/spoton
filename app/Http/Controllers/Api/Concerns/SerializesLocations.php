@@ -16,6 +16,8 @@ trait SerializesLocations
             'short' => $location->short,
             'city' => $location->city,
             'type' => $location->type,
+            'tier' => $location->tier,
+            'is_partner' => $location->isPartner(),
             'latitude' => (float) $location->latitude,
             'longitude' => (float) $location->longitude,
             'geo_radius_meters' => $location->geo_radius_meters,

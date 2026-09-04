@@ -27,7 +27,7 @@ class LocationController extends Controller
                 ->where('status', 'active')
                 ->where('created_at', '>', now()->subHours(48))
                 ->where('expires_at', '>', now())])
-            ->where('is_active', true)
+            ->publiclyVisible()
             ->when($request->query('search'), function ($query, string $search): void {
                 $query->where(function ($inner) use ($search): void {
                     $inner
@@ -48,11 +48,25 @@ class LocationController extends Controller
         ]);
     }
 
+    public function show(Location $location): JsonResponse
+    {
+        abort_unless($location->isPubliclyVisible(), 404);
+        $location->loadCount(['posts as active_stories_count' => fn (Builder $query) => $query
+            ->where('status', 'active')
+            ->where('created_at', '>', now()->subHours(48))
+            ->where('expires_at', '>', now())]);
+
+        return response()->json([
+            'message' => 'OK',
+            'data' => $this->locationPayload($location),
+        ]);
+    }
+
     public function verifyAccess(
         VerifyLocationAccessRequest $request,
         Location $location,
     ): JsonResponse {
-        abort_unless($location->is_active, 404);
+        abort_unless($location->isPubliclyVisible(), 404);
 
         if (! $location->accessPasswordMatches($request->validated('password'))) {
             throw ValidationException::withMessages([
@@ -79,7 +93,7 @@ class LocationController extends Controller
                 ->where('status', 'active')
                 ->where('created_at', '>', now()->subHours(48))
                 ->where('expires_at', '>', now())])
-            ->where('is_active', true)
+            ->publiclyVisible()
             ->get()
             ->map(function (Location $location) use ($lat, $lng): array {
                 return $this->locationPayload($location) + [
@@ -123,7 +137,7 @@ class LocationController extends Controller
         $locations = Location::query()
             ->withCount(['posts as active_stories_count' => $activeStories])
             ->withMax(['posts as latest_story_at' => $activeStories], 'created_at')
-            ->where('is_active', true)
+            ->publiclyVisible()
             ->whereHas('posts', $activeStories)
             ->get()
             ->map(function (Location $location) use ($lat, $lng): array {

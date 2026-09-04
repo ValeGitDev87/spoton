@@ -10,7 +10,10 @@ use Illuminate\Support\Facades\Storage;
 
 class AccountDeletionService
 {
-    public function __construct(private readonly PostAudioService $postAudioService) {}
+    public function __construct(
+        private readonly PostAudioService $postAudioService,
+        private readonly Media\PostShareMediaService $postShareMediaService,
+    ) {}
 
     public function delete(User $user): void
     {
@@ -21,6 +24,8 @@ class AccountDeletionService
             $user->avatar_url,
             ...($user->photos ?? []),
         ]);
+
+        $posts->each(fn (Post $post) => $this->postShareMediaService->invalidate($post));
 
         DB::transaction(function () use ($user, $postIds): void {
             $user->tokens()->delete();

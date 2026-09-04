@@ -34,6 +34,17 @@ class UpdateLocationRequest extends FormRequest
             'short' => ['sometimes', 'nullable', 'string', 'max:255'],
             'city' => ['sometimes', 'string', 'max:120'],
             'type' => ['sometimes', 'string', 'max:80'],
+            'tier' => ['sometimes', Rule::in([
+                Location::TIER_COMMUNITY,
+                Location::TIER_PARTNER,
+            ])],
+            'moderation_status' => ['sometimes', Rule::in([
+                Location::MODERATION_PENDING,
+                Location::MODERATION_APPROVED,
+                Location::MODERATION_REJECTED,
+                Location::MODERATION_SUSPENDED,
+            ])],
+            'moderation_note' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'latitude' => ['sometimes', 'numeric', 'between:-90,90'],
             'longitude' => ['sometimes', 'numeric', 'between:-180,180'],
             'geo_radius_meters' => ['sometimes', 'integer', 'min:1', 'max:200000'],

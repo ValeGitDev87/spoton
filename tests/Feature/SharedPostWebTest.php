@@ -6,6 +6,7 @@ use App\Models\Location;
 use App\Models\Post;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class SharedPostWebTest extends TestCase
@@ -24,10 +25,45 @@ class SharedPostWebTest extends TestCase
             ->assertSee('Metro Test, Napoli')
             ->assertSee('property="og:title"', false)
             ->assertSee('property="og:image"', false)
+            ->assertSee('Vedi la bacheca di questo luogo')
+            ->assertSee("/l/{$post->location_id}", false)
             ->assertSee("spoton://p/{$post->id}", false)
             ->assertDontSee('40.8319')
             ->assertDontSee('14.2193')
             ->assertDontSee('Qual era il codice?');
+    }
+
+    public function test_audio_post_generates_cached_social_card_and_audio_metadata(): void
+    {
+        Storage::fake('public');
+        $font = PHP_OS_FAMILY === 'Darwin'
+            ? '/System/Library/Fonts/Supplemental/Arial.ttf'
+            : '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
+        $fontBold = PHP_OS_FAMILY === 'Darwin'
+            ? '/System/Library/Fonts/Supplemental/Arial Bold.ttf'
+            : '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
+
+        if (! function_exists('imagecreatetruecolor') || ! is_file($font) || ! is_file($fontBold)) {
+            $this->markTestSkipped('GD o font TrueType non disponibili.');
+        }
+
+        config()->set('spoton.share_video.disk', 'public');
+        config()->set('spoton.share_video.font_path', $font);
+        config()->set('spoton.share_video.font_bold_path', $fontBold);
+        $post = $this->createPost([
+            'audio_disk' => 'public',
+            'audio_path' => 'post-audios/social.m4a',
+            'audio_url' => '/storage/post-audios/social.m4a',
+            'audio_mime' => 'audio/mp4',
+            'audio_duration_seconds' => 8,
+        ]);
+
+        $this->get("/p/{$post->id}")
+            ->assertOk()
+            ->assertSee('property="og:audio"', false)
+            ->assertSee('share-cards', false);
+
+        $this->assertCount(1, Storage::disk('public')->files('share-cards'));
     }
 
     public function test_ghost_post_never_exposes_real_author(): void
@@ -72,6 +108,9 @@ class SharedPostWebTest extends TestCase
             ->assertOk()
             ->assertJsonPath('applinks.details.0.appID', 'ABCDE12345.it.spotonapp.app')
             ->assertJsonPath('applinks.details.0.paths.0', '/p/*');
+        $this
+            ->get('/.well-known/apple-app-site-association')
+            ->assertJsonPath('applinks.details.0.paths.1', '/l/*');
 
         $this
             ->get('/.well-known/assetlinks.json')

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Chat;
 use App\Models\Location;
 use App\Models\Post;
+use App\Models\PostShareMedia;
 use App\Models\PushToken;
 use App\Models\Report;
 use App\Models\User;
@@ -95,6 +96,18 @@ class AccountDeletionApiTest extends TestCase
         Storage::disk('public')->put('profile-photos/avatar.jpg', 'avatar');
         Storage::disk('public')->put('profile-photos/photo.jpg', 'photo');
         Storage::disk('public')->put('post-audios/note.m4a', 'audio');
+        Storage::disk('public')->put('share-videos/account-video.mp4', 'video');
+        $shareMedia = PostShareMedia::query()->create([
+            'post_id' => $post->id,
+            'template_version' => 'v1',
+            'status' => PostShareMedia::STATUS_READY,
+            'disk' => 'public',
+            'path' => 'share-videos/account-video.mp4',
+            'mime' => 'video/mp4',
+            'size_bytes' => 5,
+            'generated_at' => now(),
+            'expires_at' => $post->expires_at,
+        ]);
 
         $apiTokenId = $user->createToken('delete-test')->accessToken->id;
         $pushToken = PushToken::query()->create([
@@ -142,6 +155,7 @@ class AccountDeletionApiTest extends TestCase
 
         $this->assertDatabaseMissing('users', ['id' => $user->id]);
         $this->assertDatabaseMissing('posts', ['id' => $post->id]);
+        $this->assertDatabaseMissing('post_share_media', ['id' => $shareMedia->id]);
         $this->assertDatabaseMissing('chats', ['id' => $chat->id]);
         $this->assertDatabaseMissing('personal_access_tokens', ['id' => $apiTokenId]);
         $this->assertDatabaseMissing('push_tokens', ['id' => $pushToken->id]);
@@ -151,6 +165,7 @@ class AccountDeletionApiTest extends TestCase
         Storage::disk('public')->assertMissing('profile-photos/avatar.jpg');
         Storage::disk('public')->assertMissing('profile-photos/photo.jpg');
         Storage::disk('public')->assertMissing('post-audios/note.m4a');
+        Storage::disk('public')->assertMissing('share-videos/account-video.mp4');
     }
 
     private function location(): Location

@@ -22,6 +22,7 @@ class PurgeLocationDataJob implements ShouldQueue
             ->update([
                 'last_known_latitude' => null,
                 'last_known_longitude' => null,
+                'last_location_accuracy_meters' => null,
                 'last_location_update' => null,
             ]);
 

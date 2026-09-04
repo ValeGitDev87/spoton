@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Location;
 
+use App\Models\Location;
 use App\Support\LocationIcon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -28,6 +29,16 @@ class StoreLocationRequest extends FormRequest
             'short' => ['nullable', 'string', 'max:255'],
             'city' => ['required', 'string', 'max:120'],
             'type' => ['required', 'string', 'max:80'],
+            'tier' => ['sometimes', Rule::in([
+                Location::TIER_COMMUNITY,
+                Location::TIER_PARTNER,
+            ])],
+            'moderation_status' => ['sometimes', Rule::in([
+                Location::MODERATION_PENDING,
+                Location::MODERATION_APPROVED,
+                Location::MODERATION_REJECTED,
+                Location::MODERATION_SUSPENDED,
+            ])],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
             'geo_radius_meters' => ['sometimes', 'integer', 'min:1', 'max:200000'],

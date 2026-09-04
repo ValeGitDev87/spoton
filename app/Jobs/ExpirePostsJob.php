@@ -15,6 +15,8 @@ class ExpirePostsJob implements ShouldQueue
         Post::query()
             ->where('status', 'active')
             ->where('expires_at', '<=', now())
-            ->update(['status' => 'expired']);
+            ->chunkById(100, function ($posts): void {
+                $posts->each->update(['status' => 'expired']);
+            });
     }
 }

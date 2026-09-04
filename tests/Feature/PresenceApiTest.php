@@ -27,6 +27,7 @@ class PresenceApiTest extends TestCase
             ->postJson('/api/presence/ping', [
                 'lat' => 40.8495000,
                 'lng' => 14.2569000,
+                'accuracy' => 18.4,
             ])
             ->assertOk()
             ->assertJsonPath('data.locations.0.id', $location->id)
@@ -36,6 +37,7 @@ class PresenceApiTest extends TestCase
             'id' => $user->id,
             'last_known_latitude' => 40.8495000,
             'last_known_longitude' => 14.2569000,
+            'last_location_accuracy_meters' => 19,
         ]);
 
         $this->assertDatabaseHas('presence_sessions', [
@@ -76,6 +78,7 @@ class PresenceApiTest extends TestCase
         $expiredUser = User::factory()->create([
             'last_known_latitude' => 40.8495,
             'last_known_longitude' => 14.2569,
+            'last_location_accuracy_meters' => 25,
             'last_location_update' => now()->subHours(25),
         ]);
         $freshUser = User::factory()->create([
@@ -104,6 +107,7 @@ class PresenceApiTest extends TestCase
         $expiredUser->refresh();
         $this->assertNull($expiredUser->last_known_latitude);
         $this->assertNull($expiredUser->last_known_longitude);
+        $this->assertNull($expiredUser->last_location_accuracy_meters);
         $this->assertNull($expiredUser->last_location_update);
         $this->assertNotNull($freshUser->refresh()->last_location_update);
         $this->assertDatabaseMissing('presence_sessions', ['id' => $expiredSession->id]);

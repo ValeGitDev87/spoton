@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthPasswordController;
 use App\Http\Controllers\Api\ChallengeController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\CommentController;
+use App\Http\Controllers\Api\CommunityLocationController;
 use App\Http\Controllers\Api\DevPushTestController;
 use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\FavoriteController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\MapController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\PostEngagementController;
+use App\Http\Controllers\Api\PostShareVideoController;
 use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PushTokenController;
@@ -72,8 +74,13 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::post('/challenges/{challenge}/counter-review', [ChallengeController::class, 'counterReview'])->middleware('throttle:counterproposals');
 
     Route::get('/locations', [LocationController::class, 'index']);
+    Route::get('/locations/mine', [CommunityLocationController::class, 'mine']);
+    Route::get('/locations/duplicates', [CommunityLocationController::class, 'duplicates']);
+    Route::post('/locations', [CommunityLocationController::class, 'store'])
+        ->middleware('throttle:locations-create');
     Route::get('/locations/story-feed', [LocationController::class, 'storyFeed']);
     Route::get('/locations/nearby', [LocationController::class, 'nearby']);
+    Route::get('/locations/{location}', [LocationController::class, 'show']);
     Route::post('/locations/{location}/verify-access', [LocationController::class, 'verifyAccess'])
         ->middleware('throttle:10,1');
     Route::get('/locations/{location}/stories', [StoryController::class, 'index']);
@@ -90,6 +97,8 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::post('/posts/{post}/counter-propose', [ChallengeController::class, 'counterProposeClassic'])->middleware('throttle:counterproposals');
     Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:comments');
+    Route::post('/posts/{post}/share-video', [PostShareVideoController::class, 'store']);
+    Route::get('/posts/{post}/share-video', [PostShareVideoController::class, 'show']);
     Route::post('/posts', [PostController::class, 'store'])->middleware('throttle:posts-create');
     Route::apiResource('posts', PostController::class)->except('store');
 
@@ -98,6 +107,7 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::middleware(EnsureAdmin::class)
         ->prefix('admin')
         ->group(function (): void {
+            Route::patch('/locations/{location}/moderation', [AdminLocationController::class, 'moderate']);
             Route::apiResource('locations', AdminLocationController::class);
         });
 });

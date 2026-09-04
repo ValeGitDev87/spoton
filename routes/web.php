@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\Admin\BackupController;
 use App\Http\Controllers\Web\Admin\DashboardController;
+use App\Http\Controllers\Web\Admin\ExpiredMediaController;
 use App\Http\Controllers\Web\Admin\LocationController;
 use App\Http\Controllers\Web\Admin\PostController;
 use App\Http\Controllers\Web\Admin\ReportController;
@@ -10,7 +11,9 @@ use App\Http\Controllers\Web\AppLinkAssociationController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\EmailVerificationController;
 use App\Http\Controllers\Web\PasswordResetController;
+use App\Http\Controllers\Web\PublicLocationController;
 use App\Http\Controllers\Web\SharedPostController;
+use App\Http\Controllers\Web\SharedPostMediaController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 
@@ -22,6 +25,8 @@ Route::get('/.well-known/apple-app-site-association', [AppLinkAssociationControl
 Route::get('/apple-app-site-association', [AppLinkAssociationController::class, 'apple']);
 Route::get('/.well-known/assetlinks.json', [AppLinkAssociationController::class, 'android']);
 Route::get('/p/{post}', SharedPostController::class)->name('posts.share');
+Route::get('/l/{location}', PublicLocationController::class)->name('locations.public');
+Route::get('/media/share/{media}', SharedPostMediaController::class)->name('post-share-media.show');
 
 Route::view('/privacy', 'legal.privacy', [
     'contactEmail' => config('spoton.privacy.contact_email'),
@@ -77,4 +82,6 @@ Route::middleware(['auth', EnsureAdmin::class])
         Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
         Route::post('backups', [BackupController::class, 'store'])->name('backups.store');
         Route::get('backups/{filename}', [BackupController::class, 'download'])->name('backups.download');
+        Route::get('expired-media', [ExpiredMediaController::class, 'index'])->name('expired-media.index');
+        Route::post('expired-media/purge', [ExpiredMediaController::class, 'purge'])->name('expired-media.purge');
     });

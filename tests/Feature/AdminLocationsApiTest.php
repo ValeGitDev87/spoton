@@ -45,13 +45,17 @@ class AdminLocationsApiTest extends TestCase
             ])
             ->assertCreated()
             ->assertJsonPath('data.name', 'Villa Comunale')
-            ->assertJsonPath('data.city', 'Napoli');
+            ->assertJsonPath('data.city', 'Napoli')
+            ->assertJsonPath('data.tier', Location::TIER_PARTNER)
+            ->assertJsonPath('data.moderation_status', Location::MODERATION_APPROVED);
 
         $this->assertDatabaseHas('locations', [
             'name' => 'Villa Comunale',
             'city' => 'Napoli',
             'type' => 'parco',
             'geo_radius_meters' => 250,
+            'tier' => Location::TIER_PARTNER,
+            'moderation_status' => Location::MODERATION_APPROVED,
         ]);
     }
 
