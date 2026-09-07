@@ -5,12 +5,14 @@ namespace App\Observers;
 use App\Models\Post;
 use App\Services\Media\PostShareMediaService;
 use App\Services\Media\PostSocialCardService;
+use App\Services\PostVideoService;
 
 class PostObserver
 {
     public function __construct(
         private readonly PostShareMediaService $shareMedia,
         private readonly PostSocialCardService $socialCards,
+        private readonly PostVideoService $postVideoService,
     ) {}
 
     public function updated(Post $post): void
@@ -23,6 +25,8 @@ class PostObserver
             'audio_disk',
             'audio_path',
             'audio_duration_seconds',
+            'video_path',
+            'video_duration_seconds',
             'expires_at',
         ]);
         $becameUnavailable = $post->wasChanged('status')
@@ -42,5 +46,6 @@ class PostObserver
     {
         $this->shareMedia->invalidate($post);
         $this->socialCards->invalidate($post);
+        $this->postVideoService->deleteForPost($post);
     }
 }

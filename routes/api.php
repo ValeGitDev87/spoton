@@ -15,7 +15,6 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\MapController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\PostEngagementController;
-use App\Http\Controllers\Api\PostShareVideoController;
 use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PushTokenController;
@@ -97,8 +96,6 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::post('/posts/{post}/counter-propose', [ChallengeController::class, 'counterProposeClassic'])->middleware('throttle:counterproposals');
     Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
     Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:comments');
-    Route::post('/posts/{post}/share-video', [PostShareVideoController::class, 'store']);
-    Route::get('/posts/{post}/share-video', [PostShareVideoController::class, 'show']);
     Route::post('/posts', [PostController::class, 'store'])->middleware('throttle:posts-create');
     Route::apiResource('posts', PostController::class)->except('store');
 

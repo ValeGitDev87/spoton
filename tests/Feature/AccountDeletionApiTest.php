@@ -88,6 +88,12 @@ class AccountDeletionApiTest extends TestCase
             'audio_mime' => 'audio/mp4',
             'audio_size_bytes' => 100,
             'audio_duration_seconds' => 5,
+            'video_disk' => 'public',
+            'video_path' => 'post-videos/account-video.mp4',
+            'video_url' => '/storage/post-videos/account-video.mp4',
+            'video_mime' => 'video/mp4',
+            'video_size_bytes' => 1000,
+            'video_duration_seconds' => 12,
             'sighting_date' => now()->toDateString(),
             'expires_at' => now()->addDay(),
             'status' => 'active',
@@ -96,6 +102,7 @@ class AccountDeletionApiTest extends TestCase
         Storage::disk('public')->put('profile-photos/avatar.jpg', 'avatar');
         Storage::disk('public')->put('profile-photos/photo.jpg', 'photo');
         Storage::disk('public')->put('post-audios/note.m4a', 'audio');
+        Storage::disk('public')->put('post-videos/account-video.mp4', 'post-video');
         Storage::disk('public')->put('share-videos/account-video.mp4', 'video');
         $shareMedia = PostShareMedia::query()->create([
             'post_id' => $post->id,
@@ -165,6 +172,7 @@ class AccountDeletionApiTest extends TestCase
         Storage::disk('public')->assertMissing('profile-photos/avatar.jpg');
         Storage::disk('public')->assertMissing('profile-photos/photo.jpg');
         Storage::disk('public')->assertMissing('post-audios/note.m4a');
+        Storage::disk('public')->assertMissing('post-videos/account-video.mp4');
         Storage::disk('public')->assertMissing('share-videos/account-video.mp4');
     }
 

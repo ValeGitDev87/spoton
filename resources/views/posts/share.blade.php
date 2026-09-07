@@ -25,6 +25,11 @@
         <meta property="og:audio:secure_url" content="{{ $audioUrl }}">
         <meta property="og:audio:type" content="{{ $post->audio_mime ?: 'audio/mp4' }}">
     @endif
+    @if ($videoUrl)
+        <meta property="og:video" content="{{ $videoUrl }}">
+        <meta property="og:video:secure_url" content="{{ $videoUrl }}">
+        <meta property="og:video:type" content="{{ $post->video_mime ?: 'video/mp4' }}">
+    @endif
 
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="{{ $title }}">
@@ -91,6 +96,7 @@
         .author-meta { color: #98a2b3; font-size: 12px; margin-top: 2px; }
         .post-text { font-size: 19px; line-height: 1.55; margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
         .song { border-left: 3px solid #ec4899; color: #475467; font-size: 14px; line-height: 1.45; margin: 20px 0 0; padding-left: 12px; overflow-wrap: anywhere; }
+        video { background: #111827; border-radius: 8px; display: block; margin-top: 20px; max-height: 70vh; max-width: 100%; width: 100%; }
         audio { margin-top: 20px; max-width: 100%; width: 100%; }
         .date { border-top: 1px solid #eef0f3; color: #98a2b3; font-size: 12px; margin-top: 22px; padding-top: 15px; }
         .unavailable { padding: 34px 22px; text-align: center; }
@@ -152,6 +158,12 @@
 
                     @if ($post->song_quote)
                         <p class="song">“{{ $post->song_quote }}”</p>
+                    @endif
+
+                    @if ($videoUrl)
+                        <video controls playsinline preload="metadata" src="{{ $videoUrl }}">
+                            Il browser non supporta la riproduzione video.
+                        </video>
                     @endif
 
                     @if ($audioUrl)

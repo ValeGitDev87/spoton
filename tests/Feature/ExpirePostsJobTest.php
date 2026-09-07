@@ -33,19 +33,28 @@ class ExpirePostsJobTest extends TestCase
             'is_active' => true,
         ]);
 
-        $expired = $this->makePost($user, $location, now()->subMinute(), 'active');
+        $postVideoPath = 'post-videos/expired-test.mp4';
+        $expired = $this->makePost($user, $location, now()->subMinute(), 'active', [
+            'video_disk' => 'public',
+            'video_path' => $postVideoPath,
+            'video_url' => '/storage/'.$postVideoPath,
+            'video_mime' => 'video/mp4',
+            'video_size_bytes' => 10,
+            'video_duration_seconds' => 12,
+        ]);
         $stillActive = $this->makePost($user, $location, now()->addMinute(), 'active');
         $removed = $this->makePost($user, $location, now()->subMinute(), 'removed');
         $cardPath = "share-cards/{$expired->id}-v1.png";
-        $videoPath = "share-videos/{$expired->id}-v1.mp4";
+        $shareVideoPath = "share-videos/{$expired->id}-v1.mp4";
         Storage::disk('public')->put($cardPath, 'card');
-        Storage::disk('public')->put($videoPath, 'video');
+        Storage::disk('public')->put($shareVideoPath, 'share-video');
+        Storage::disk('public')->put($postVideoPath, 'post-video');
         PostShareMedia::query()->create([
             'post_id' => $expired->id,
             'template_version' => 'v1',
             'status' => PostShareMedia::STATUS_READY,
             'disk' => 'public',
-            'path' => $videoPath,
+            'path' => $shareVideoPath,
             'mime' => 'video/mp4',
             'size_bytes' => 5,
             'generated_at' => now()->subHour(),
@@ -69,13 +78,25 @@ class ExpirePostsJobTest extends TestCase
             'status' => 'removed',
         ]);
         Storage::disk('public')->assertMissing($cardPath);
-        Storage::disk('public')->assertExists($videoPath);
-        $this->assertDatabaseHas('post_share_media', ['post_id' => $expired->id]);
+        Storage::disk('public')->assertMissing($postVideoPath);
+        Storage::disk('public')->assertMissing($shareVideoPath);
+        $this->assertDatabaseMissing('post_share_media', ['post_id' => $expired->id]);
+        $this->assertDatabaseHas('posts', [
+            'id' => $expired->id,
+            'video_path' => null,
+            'video_url' => null,
+        ]);
 
         Carbon::setTestNow();
     }
 
-    private function makePost(User $user, Location $location, Carbon $expiresAt, string $status): Post
+    private function makePost(
+        User $user,
+        Location $location,
+        Carbon $expiresAt,
+        string $status,
+        array $overrides = [],
+    ): Post
     {
         return Post::query()->create([
             'author_id' => $user->id,
@@ -85,6 +106,7 @@ class ExpirePostsJobTest extends TestCase
             'sighting_date' => '2026-07-09',
             'expires_at' => $expiresAt,
             'status' => $status,
+            ...$overrides,
         ]);
     }
 }

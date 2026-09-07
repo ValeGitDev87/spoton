@@ -27,6 +27,12 @@ class Post extends Model
         'audio_mime',
         'audio_size_bytes',
         'audio_duration_seconds',
+        'video_disk',
+        'video_path',
+        'video_url',
+        'video_mime',
+        'video_size_bytes',
+        'video_duration_seconds',
         'sighting_date',
         'is_anonymous',
         'mentions_everyone',
@@ -64,6 +70,8 @@ class Post extends Model
             'community_false_count' => 'integer',
             'audio_size_bytes' => 'integer',
             'audio_duration_seconds' => 'integer',
+            'video_size_bytes' => 'integer',
+            'video_duration_seconds' => 'integer',
         ];
     }
 

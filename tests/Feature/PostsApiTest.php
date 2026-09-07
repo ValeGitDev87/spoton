@@ -292,6 +292,90 @@ class PostsApiTest extends TestCase
             ->assertJsonValidationErrors(['audio_duration_seconds']);
     }
 
+    public function test_authenticated_user_can_create_post_with_video(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $location = $this->location();
+
+        $response = $this
+            ->actingAs($user, 'sanctum')
+            ->post('/api/posts', [
+                'location_id' => $location->id,
+                'text' => 'Ti lascio un video.',
+                'sighting_date' => now()->toDateString(),
+                'video_duration_seconds' => 12,
+                'video' => UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'),
+            ], ['Accept' => 'application/json'])
+            ->assertCreated()
+            ->assertJsonPath('data.video.duration_seconds', 12)
+            ->assertJsonPath('data.video.mime', 'video/mp4');
+
+        $post = Post::query()->findOrFail($response->json('data.id'));
+
+        $this->assertNotNull($post->video_path);
+        $this->assertSame('public', $post->video_disk);
+        $this->assertSame(1048576, $post->video_size_bytes);
+        Storage::disk('public')->assertExists($post->video_path);
+    }
+
+    public function test_video_cannot_exceed_fifteen_seconds(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $location = $this->location();
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->post('/api/posts', [
+                'location_id' => $location->id,
+                'text' => 'Video troppo lungo.',
+                'sighting_date' => now()->toDateString(),
+                'video_duration_seconds' => 15.1,
+                'video' => UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'),
+            ], ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['video_duration_seconds']);
+    }
+
+    public function test_owner_can_remove_video(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $post = Post::query()->create([
+            'author_id' => $user->id,
+            'location_id' => $this->location()->id,
+            'text' => 'Post con video',
+            'sighting_date' => now()->toDateString(),
+            'expires_at' => now()->addDay(),
+            'video_disk' => 'public',
+            'video_path' => 'post-videos/test.mp4',
+            'video_url' => '/storage/post-videos/test.mp4',
+            'video_mime' => 'video/mp4',
+            'video_size_bytes' => 1000000,
+            'video_duration_seconds' => 12,
+            'status' => 'active',
+        ]);
+
+        Storage::disk('public')->put('post-videos/test.mp4', 'fake-video');
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->patchJson("/api/posts/{$post->id}", ['remove_video' => true])
+            ->assertOk()
+            ->assertJsonPath('data.video', null);
+
+        $this->assertDatabaseHas('posts', [
+            'id' => $post->id,
+            'video_path' => null,
+            'video_url' => null,
+        ]);
+        Storage::disk('public')->assertMissing('post-videos/test.mp4');
+    }
+
     public function test_owner_can_remove_audio_note(): void
     {
         Storage::fake('public');

@@ -45,6 +45,11 @@ return [
         'directory' => env('SPOTON_AUDIO_DIRECTORY', 'post-audios'),
     ],
 
+    'spoton_video' => [
+        'disk' => env('SPOTON_VIDEO_DISK', 'public'),
+        'directory' => env('SPOTON_VIDEO_DIRECTORY', 'post-videos'),
+    ],
+
     'spoton_auth' => [
         'email_verification_expire_minutes' => (int) env('SPOTON_EMAIL_VERIFICATION_EXPIRE_MINUTES', 60),
         'password_reset_expire_minutes' => (int) env('SPOTON_PASSWORD_RESET_EXPIRE_MINUTES', 30),

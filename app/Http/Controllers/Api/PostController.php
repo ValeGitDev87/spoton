@@ -12,6 +12,7 @@ use App\Jobs\Push\SendPostMentionNotifications;
 use App\Models\Post;
 use App\Services\GeoDistance;
 use App\Services\PostAudioService;
+use App\Services\PostVideoService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -180,8 +181,11 @@ class PostController extends Controller
         ]);
     }
 
-    public function store(StorePostRequest $request, PostAudioService $postAudioService): JsonResponse
-    {
+    public function store(
+        StorePostRequest $request,
+        PostAudioService $postAudioService,
+        PostVideoService $postVideoService,
+    ): JsonResponse {
         $mentionUserIds = array_values(array_unique($request->validated('mention_user_ids', [])));
         $mentionsEveryone = $request->boolean('mention_everyone');
         $everyoneRateLimitKey = 'post-mention-everyone:'.$request->user()->id;
@@ -205,6 +209,14 @@ class PostController extends Controller
                 $post,
                 $request->file('audio'),
                 (float) $request->validated('audio_duration_seconds'),
+            ));
+        }
+
+        if ($request->hasFile('video')) {
+            $post->update($postVideoService->store(
+                $post,
+                $request->file('video'),
+                (float) $request->validated('video_duration_seconds'),
             ));
         }
 
@@ -238,8 +250,12 @@ class PostController extends Controller
         ]);
     }
 
-    public function update(UpdatePostRequest $request, Post $post, PostAudioService $postAudioService): JsonResponse
-    {
+    public function update(
+        UpdatePostRequest $request,
+        Post $post,
+        PostAudioService $postAudioService,
+        PostVideoService $postVideoService,
+    ): JsonResponse {
         abort_unless($post->author_id === $request->user()->id || $request->user()->is_admin, 403);
 
         $post->update($this->preparePostData($request->validated()));
@@ -258,17 +274,33 @@ class PostController extends Controller
             ));
         }
 
+        if ($request->boolean('remove_video')) {
+            $postVideoService->deleteForPost($post);
+            $post->update($postVideoService->emptyPayload());
+        }
+
+        if ($request->hasFile('video')) {
+            $postVideoService->deleteForPost($post);
+            $post->update($postVideoService->store(
+                $post,
+                $request->file('video'),
+                (float) $request->validated('video_duration_seconds'),
+            ));
+        }
+
         return response()->json([
             'message' => 'OK',
             'data' => $this->postPayload($post->refresh(), $request->user(), detail: true),
         ]);
     }
 
-    public function destroy(Request $request, Post $post): JsonResponse
+    public function destroy(Request $request, Post $post, PostVideoService $postVideoService): JsonResponse
     {
         abort_unless($post->author_id === $request->user()->id || $request->user()->is_admin, 403);
 
         $post->update(['status' => 'removed']);
+        $postVideoService->deleteForPost($post);
+        $post->update($postVideoService->emptyPayload());
 
         return response()->json([
             'message' => 'OK',
@@ -321,6 +353,9 @@ class PostController extends Controller
             $data['audio_duration_seconds'],
             $data['location_password'],
             $data['remove_audio'],
+            $data['video'],
+            $data['video_duration_seconds'],
+            $data['remove_video'],
             $data['mention_user_ids'],
             $data['mention_everyone'],
         );
