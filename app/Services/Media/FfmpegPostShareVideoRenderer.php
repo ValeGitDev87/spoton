@@ -21,8 +21,8 @@ class FfmpegPostShareVideoRenderer implements PostShareVideoRenderer
         $media->loadMissing(['post.author', 'post.location', 'post.mentions']);
         $post = $media->post;
 
-        if (! $post || ! $post->audio_disk || ! $post->audio_path) {
-            throw new RuntimeException('Audio sorgente non disponibile.');
+        if (! $post) {
+            throw new RuntimeException('Post sorgente non disponibile.');
         }
 
         $tempDirectory = storage_path('app/share-video-temp/'.$media->id);
@@ -31,8 +31,11 @@ class FfmpegPostShareVideoRenderer implements PostShareVideoRenderer
         File::ensureDirectoryExists($tempDirectory);
 
         try {
-            $audioPath = $tempDirectory.'/source-audio';
-            $this->copyToLocalPath($post->audio_disk, $post->audio_path, $audioPath);
+            $audioPath = null;
+            if ($post->audio_disk && $post->audio_path) {
+                $audioPath = $tempDirectory.'/source-audio';
+                $this->copyToLocalPath($post->audio_disk, $post->audio_path, $audioPath);
+            }
 
             $textFiles = $this->writeTextFiles($tempDirectory, $media);
             $outputPath = $tempDirectory.'/share-video.mp4';
@@ -78,7 +81,7 @@ class FfmpegPostShareVideoRenderer implements PostShareVideoRenderer
      * @param  array{author: string, category: string, location: string, text: string}  $textFiles
      */
     private function runFfmpeg(
-        string $audioPath,
+        ?string $audioPath,
         string $outputPath,
         array $textFiles,
         PostShareMedia $media,
@@ -91,7 +94,9 @@ class FfmpegPostShareVideoRenderer implements PostShareVideoRenderer
         $width = (int) config('spoton.share_video.width', 720);
         $height = (int) config('spoton.share_video.height', 1280);
         $fps = (int) config('spoton.share_video.fps', 25);
-        $duration = min(10, max(1, (int) ($post->audio_duration_seconds ?: 10)));
+        $duration = $audioPath
+            ? min(10, max(1, (int) ($post->audio_duration_seconds ?: 10)))
+            : 7;
 
         foreach ([$font, $fontBold, $logo] as $requiredFile) {
             if (! is_file($requiredFile)) {
@@ -119,6 +124,10 @@ class FfmpegPostShareVideoRenderer implements PostShareVideoRenderer
             "[location]drawtext=fontfile='{$boldFont}':text='Ascolta e scopri su SpotOn':expansion=none:fontcolor=white:fontsize=27:x=60:y=1120[v]",
         ]);
 
+        $audioInput = $audioPath
+            ? ['-i', $audioPath]
+            : ['-f', 'lavfi', '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100'];
+
         $process = new Process([
             $binary,
             '-hide_banner',
@@ -129,8 +138,7 @@ class FfmpegPostShareVideoRenderer implements PostShareVideoRenderer
             'lavfi',
             '-i',
             "color=c=0x111827:s={$width}x{$height}:r={$fps}:d={$duration}",
-            '-i',
-            $audioPath,
+            ...$audioInput,
             '-loop',
             '1',
             '-i',

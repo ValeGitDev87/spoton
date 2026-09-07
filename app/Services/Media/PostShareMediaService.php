@@ -104,10 +104,6 @@ class PostShareMediaService
     {
         $post->loadMissing('location');
         abort_unless($post->isActive() && $post->location?->isPubliclyVisible(), 404);
-
-        if (! $post->audio_disk || ! $post->audio_path) {
-            abort(422, 'Questo post non contiene una nota audio.');
-        }
     }
 
     public function invalidate(Post $post): void

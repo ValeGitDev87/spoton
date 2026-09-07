@@ -78,13 +78,30 @@ class PostShareVideoApiTest extends TestCase
         Queue::assertNothingPushed();
     }
 
-    public function test_video_request_rejects_disabled_feature_unavailable_posts_and_missing_audio(): void
+    public function test_video_request_accepts_posts_without_audio(): void
+    {
+        $user = User::factory()->create();
+        $post = $this->createPostWithAudio([
+            'audio_disk' => null,
+            'audio_path' => null,
+            'audio_url' => null,
+            'audio_mime' => null,
+            'audio_size_bytes' => null,
+            'audio_duration_seconds' => null,
+        ]);
+        Sanctum::actingAs($user);
+
+        $this->postJson("/api/posts/{$post->id}/share-video")
+            ->assertStatus(202)
+            ->assertJsonPath('data.status', 'pending');
+
+        Queue::assertPushed(GeneratePostShareVideo::class, 1);
+    }
+
+    public function test_video_request_rejects_disabled_feature_and_unavailable_posts(): void
     {
         $user = User::factory()->create();
         Sanctum::actingAs($user);
-
-        $withoutAudio = $this->createPostWithAudio(['audio_path' => null, 'audio_disk' => null]);
-        $this->postJson("/api/posts/{$withoutAudio->id}/share-video")->assertStatus(422);
 
         $expired = $this->createPostWithAudio(['expires_at' => now()->subMinute()]);
         $this->postJson("/api/posts/{$expired->id}/share-video")->assertNotFound();
