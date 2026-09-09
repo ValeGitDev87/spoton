@@ -150,6 +150,16 @@ class User extends Authenticatable implements MustVerifyEmailContract
         return $this->morphMany(Report::class, 'reportable');
     }
 
+    public function blockedUsers(): HasMany
+    {
+        return $this->hasMany(UserBlock::class, 'blocker_id');
+    }
+
+    public function blockedByUsers(): HasMany
+    {
+        return $this->hasMany(UserBlock::class, 'blocked_id');
+    }
+
     public function sendEmailVerificationNotification(): void
     {
         $this->notify(new VerifyEmailNotification);

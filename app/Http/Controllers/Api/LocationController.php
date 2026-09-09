@@ -9,6 +9,7 @@ use App\Http\Requests\Location\StoryFeedLocationsRequest;
 use App\Http\Requests\Location\VerifyLocationAccessRequest;
 use App\Models\Location;
 use App\Services\GeoDistance;
+use App\Services\UserBlockService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,8 +23,10 @@ class LocationController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
         $locations = Location::query()
             ->withCount(['posts as active_stories_count' => fn (Builder $query) => $query
+                ->whereNotIn('author_id', $blockedIds)
                 ->where('status', 'active')
                 ->where('created_at', '>', now()->subHours(48))
                 ->where('expires_at', '>', now())])
@@ -48,10 +51,12 @@ class LocationController extends Controller
         ]);
     }
 
-    public function show(Location $location): JsonResponse
+    public function show(Request $request, Location $location): JsonResponse
     {
         abort_unless($location->isPubliclyVisible(), 404);
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
         $location->loadCount(['posts as active_stories_count' => fn (Builder $query) => $query
+            ->whereNotIn('author_id', $blockedIds)
             ->where('status', 'active')
             ->where('created_at', '>', now()->subHours(48))
             ->where('expires_at', '>', now())]);
@@ -87,9 +92,11 @@ class LocationController extends Controller
         $lat = (float) $request->validated('lat');
         $lng = (float) $request->validated('lng');
         $radiusKm = (float) ($request->validated('radius_km') ?? 200);
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
 
         $locations = Location::query()
             ->withCount(['posts as active_stories_count' => fn (Builder $query) => $query
+                ->whereNotIn('author_id', $blockedIds)
                 ->where('status', 'active')
                 ->where('created_at', '>', now()->subHours(48))
                 ->where('expires_at', '>', now())])
@@ -129,7 +136,9 @@ class LocationController extends Controller
         $lng = $hasCoordinates ? (float) $request->validated('lng') : null;
         $page = (int) ($request->validated('page') ?? 1);
         $perPage = (int) ($request->validated('per_page') ?? 20);
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
         $activeStories = fn (Builder $query) => $query
+            ->whereNotIn('author_id', $blockedIds)
             ->where('status', 'active')
             ->where('created_at', '>', now()->subHours(48))
             ->where('expires_at', '>', now());

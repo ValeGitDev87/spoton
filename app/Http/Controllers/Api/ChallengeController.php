@@ -11,6 +11,7 @@ use App\Models\PostIWasThere;
 use App\Models\User;
 use App\Services\Chat\ConversationService;
 use App\Services\Push\PushNotificationService;
+use App\Services\UserBlockService;
 use App\Support\PostCategory;
 use App\Support\Push\PushNotificationType;
 use Illuminate\Database\Eloquent\Builder;
@@ -22,10 +23,14 @@ use Illuminate\Validation\ValidationException;
 
 class ChallengeController extends Controller
 {
-    public function __construct(private readonly ConversationService $conversations) {}
+    public function __construct(
+        private readonly ConversationService $conversations,
+        private readonly UserBlockService $blocks,
+    ) {}
 
     public function pending(Request $request): JsonResponse
     {
+        $blockedIds = $this->blocks->blockedUserIds($request->user()->id);
         $challenges = Challenge::query()
             ->with(['post.location', 'challenger', 'targetUser', 'sourceComment.author', 'counterProposer'])
             ->where(function (Builder $query) use ($request): void {
@@ -46,6 +51,12 @@ class ChallengeController extends Controller
                                     ->where('challenger_id', $request->user()->id));
                         }));
             })
+            ->whereNotIn('challenger_id', $blockedIds)
+            ->whereNotIn('target_user_id', $blockedIds)
+            ->where(function (Builder $query) use ($blockedIds): void {
+                $query->whereNull('counter_proposed_by')
+                    ->orWhereNotIn('counter_proposed_by', $blockedIds);
+            })
             ->latest()
             ->paginate((int) $request->query('per_page', 25));
 
@@ -65,6 +76,7 @@ class ChallengeController extends Controller
     {
         $this->ensureSupportsChallenges($post);
         abort_if($post->author_id === $request->user()->id, 422, 'Non puoi verificare un tuo post.');
+        $this->blocks->ensureInteractionAllowed($request->user()->id, $post->author_id);
         abort_if(! $post->secret_answer_hash, 422, 'Questo post non ha una domanda di verifica.');
 
         $data = $request->validate([
@@ -137,6 +149,7 @@ class ChallengeController extends Controller
         $targetUserId = $this->resolveTargetUserId($post, $data);
 
         abort_if($targetUserId === $request->user()->id, 422, 'Non puoi sfidare te stesso.');
+        $this->blocks->ensureInteractionAllowed($request->user()->id, $targetUserId);
         abort_if(
             $data['target_type'] === Challenge::TARGET_POST_AUTHOR
             && $post->secret_answer_hash,
@@ -187,7 +200,7 @@ class ChallengeController extends Controller
             'status' => Challenge::STATUS_PENDING,
         ])->load(['post.location', 'challenger', 'targetUser', 'sourceComment.author']);
 
-        $this->sendChallengePush($challenge->targetUser, 'Nuova sfida su SpotOn', $request->user()->display_name.' ti ha inviato una sfida.', PushNotificationType::CHALLENGE_RECEIVED, $challenge);
+        $this->sendChallengePush($challenge->targetUser, 'Nuova sfida su SpotOn', $request->user()->display_name.' ti ha inviato una sfida.', PushNotificationType::CHALLENGE_RECEIVED, $challenge, $request->user());
 
         return response()->json([
             'message' => 'OK',
@@ -199,6 +212,7 @@ class ChallengeController extends Controller
     {
         $this->ensureSupportsChallenges($challenge->post);
         abort_unless($challenge->target_user_id === $request->user()->id, 403);
+        $this->blocks->ensureInteractionAllowed($request->user()->id, $challenge->challenger_id);
         abort_unless(in_array($challenge->status, [Challenge::STATUS_PENDING, Challenge::STATUS_REJECTED], true), 422);
 
         $data = $request->validate([
@@ -255,7 +269,7 @@ class ChallengeController extends Controller
                 ? 'Ghost'
                 : $request->user()->display_name;
 
-        $this->sendChallengePush($result['challenge']->challenger, 'Sfida accettata', $answererName.' ha risposto correttamente alla tua sfida.', PushNotificationType::CHALLENGE_ACCEPTED, $result['challenge']);
+        $this->sendChallengePush($result['challenge']->challenger, 'Sfida accettata', $answererName.' ha risposto correttamente alla tua sfida.', PushNotificationType::CHALLENGE_ACCEPTED, $result['challenge'], $request->user());
 
         return response()->json([
             'message' => 'OK',
@@ -273,6 +287,7 @@ class ChallengeController extends Controller
     {
         $this->ensureSupportsChallenges($post);
         abort_if($post->author_id === $request->user()->id, 422, 'Non puoi controproporre su un tuo post.');
+        $this->blocks->ensureInteractionAllowed($request->user()->id, $post->author_id);
         abort_if(! $post->secret_answer_hash, 422, 'Questo post non ha una domanda di verifica.');
 
         $data = $request->validate([
@@ -292,7 +307,7 @@ class ChallengeController extends Controller
             'counter_proposed_by' => $request->user()->id,
         ])->load(['post.location', 'challenger', 'targetUser', 'counterProposer']);
 
-        $this->sendChallengePush($challenge->targetUser, 'Nuova controproposta', $request->user()->display_name.' ha inviato una controproposta.', PushNotificationType::COUNTERPROPOSAL_RECEIVED, $challenge);
+        $this->sendChallengePush($challenge->targetUser, 'Nuova controproposta', $request->user()->display_name.' ha inviato una controproposta.', PushNotificationType::COUNTERPROPOSAL_RECEIVED, $challenge, $request->user());
 
         return response()->json([
             'message' => 'OK',
@@ -304,6 +319,7 @@ class ChallengeController extends Controller
     {
         $this->ensureSupportsChallenges($challenge->post);
         abort_unless($challenge->target_user_id === $request->user()->id, 403);
+        $this->blocks->ensureInteractionAllowed($request->user()->id, $challenge->challenger_id);
         abort_unless(in_array($challenge->status, [Challenge::STATUS_PENDING, Challenge::STATUS_REJECTED], true), 422);
 
         $data = $request->validate([
@@ -317,7 +333,7 @@ class ChallengeController extends Controller
         ]);
 
         $challenge->load(['post.location', 'challenger', 'targetUser', 'counterProposer']);
-        $this->sendChallengePush($challenge->challenger, 'Nuova controproposta', $request->user()->display_name.' ha inviato una controproposta.', PushNotificationType::COUNTERPROPOSAL_RECEIVED, $challenge);
+        $this->sendChallengePush($challenge->challenger, 'Nuova controproposta', $request->user()->display_name.' ha inviato una controproposta.', PushNotificationType::COUNTERPROPOSAL_RECEIVED, $challenge, $request->user());
 
         return response()->json([
             'message' => 'OK',
@@ -342,6 +358,9 @@ class ChallengeController extends Controller
             403,
             "Solo l'autore della proposta puo valutarla.",
         );
+        $counterpart = $this->counterCounterpart($challenge, $request->user());
+        abort_unless($counterpart, 422, 'Controparte non disponibile.');
+        $this->blocks->ensureInteractionAllowed($request->user()->id, $counterpart->id);
 
         if (! $data['accepted']) {
             $challenge->update([
@@ -350,7 +369,7 @@ class ChallengeController extends Controller
             ]);
 
             $challenge->load(['post.location', 'challenger', 'targetUser', 'counterProposer']);
-            $this->sendChallengePush($this->counterCounterpart($challenge, $request->user()), 'Controproposta rifiutata', 'La tua controproposta non e stata accettata.', PushNotificationType::COUNTERPROPOSAL_REJECTED, $challenge);
+            $this->sendChallengePush($counterpart, 'Controproposta rifiutata', 'La tua controproposta non e stata accettata.', PushNotificationType::COUNTERPROPOSAL_REJECTED, $challenge, $request->user());
 
             return response()->json([
                 'message' => 'OK',
@@ -402,7 +421,7 @@ class ChallengeController extends Controller
             ];
         });
 
-        $this->sendChallengePush($this->counterCounterpart($result['challenge'], $request->user()), 'Controproposta accettata', 'La tua controproposta e stata accettata.', PushNotificationType::COUNTERPROPOSAL_ACCEPTED, $result['challenge']);
+        $this->sendChallengePush($counterpart, 'Controproposta accettata', 'La tua controproposta e stata accettata.', PushNotificationType::COUNTERPROPOSAL_ACCEPTED, $result['challenge'], $request->user());
 
         return response()->json([
             'message' => 'OK',
@@ -463,7 +482,7 @@ class ChallengeController extends Controller
         return null;
     }
 
-    private function sendChallengePush(?User $recipient, string $title, string $body, string $type, Challenge $challenge): void
+    private function sendChallengePush(?User $recipient, string $title, string $body, string $type, Challenge $challenge, User $actor): void
     {
         if (! $recipient) {
             return;
@@ -478,6 +497,7 @@ class ChallengeController extends Controller
                 'challenge_id' => $challenge->id,
                 'post_id' => $challenge->post_id,
             ],
+            $actor,
         );
     }
 

@@ -6,9 +6,12 @@ use App\Models\Chat;
 use App\Models\Message;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\UserBlockService;
 
 class ConversationService
 {
+    public function __construct(private readonly UserBlockService $blocks) {}
+
     /**
      * @param  array<string, string|null>  $origin
      */
@@ -67,6 +70,7 @@ class ConversationService
     {
         $chat->loadMissing(['userOne', 'userTwo', 'latestMessage.sender']);
         $other = $chat->user_one_id === $viewer->id ? $chat->userTwo : $chat->userOne;
+        $interactionBlocked = $this->blocks->isBlockedBetween($viewer->id, $other->id);
         $lastMessage = $chat->latestMessage;
         $clearedAt = $chat->clearedAtFor($viewer->id);
 
@@ -82,6 +86,8 @@ class ConversationService
             'can_reveal_identity' => $chat->isGhost()
                 && ! $chat->identityRevealed()
                 && $chat->ghost_owner_id === $viewer->id,
+            'interaction_blocked' => $interactionBlocked,
+            'blocked_by_me' => $this->blocks->isBlockedBy($viewer->id, $other->id),
             'participant' => $this->userPayload(
                 $other,
                 $chat->shouldMaskIdentityOf($other->id, $viewer),

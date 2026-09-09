@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Favorite;
 use App\Models\User;
+use App\Services\UserBlockService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,6 +61,10 @@ class FavoriteController extends Controller
         $normalizedTargetName = mb_strtolower($targetName);
 
         abort_if($targetUser?->id === $request->user()->id, 422, 'Non puoi aggiungere te stesso ai preferiti.');
+
+        if ($targetUser) {
+            app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $targetUser->id);
+        }
 
         $favorite = Favorite::query()
             ->where('owner_id', $request->user()->id)

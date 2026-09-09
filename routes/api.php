@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\StoryController;
+use App\Http\Controllers\Api\UserBlockController;
 use App\Http\Controllers\Api\UserNotificationController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureNotSuspended;
@@ -50,7 +51,11 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::get('/users/me/posts', [ProfileController::class, 'posts']);
     Route::get('/users/me/karma', [ProfileController::class, 'karma']);
     Route::get('/users/search', [ProfileController::class, 'searchUsers']);
+    Route::get('/users/me/blocked', [UserBlockController::class, 'index']);
+    Route::delete('/users/me/blocked/{userBlock}', [UserBlockController::class, 'destroy']);
     Route::get('/users/{user}/public-profile', [ProfileController::class, 'publicProfile']);
+    Route::post('/users/{user}/block', [UserBlockController::class, 'store'])->middleware('throttle:10,1');
+    Route::delete('/users/{user}/block', [UserBlockController::class, 'destroyForUser']);
     Route::post('/users/me/photos', [ProfileController::class, 'storePhoto']);
     Route::delete('/users/me/photos/{photoId}', [ProfileController::class, 'destroyPhoto']);
 
@@ -64,6 +69,7 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::get('/chats/{chat}/messages', [ChatController::class, 'messages']);
     Route::post('/chats/{chat}/messages', [ChatController::class, 'send'])->middleware('throttle:messages');
     Route::post('/chats/{chat}/reveal-identity', [ChatController::class, 'revealIdentity'])->middleware('throttle:5,1');
+    Route::post('/chats/{chat}/block-participant', [UserBlockController::class, 'storeForChat'])->middleware('throttle:10,1');
     Route::delete('/chats/{chat}', [ChatController::class, 'destroy']);
 
     Route::get('/challenges/pending', [ChallengeController::class, 'pending']);
@@ -91,6 +97,7 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
     Route::get('/posts/{post}/likes', [PostEngagementController::class, 'likes']);
     Route::post('/posts/{post}/io-cero', [PostEngagementController::class, 'toggleIoCero'])->middleware('throttle:engagements');
     Route::post('/posts/{post}/community-vote', [PostEngagementController::class, 'communityVote'])->middleware('throttle:engagements');
+    Route::post('/posts/{post}/block-author', [UserBlockController::class, 'storeForPost'])->middleware('throttle:10,1');
     Route::get('/posts/{post}/io-cero-users', [PostEngagementController::class, 'ioCeroUsers']);
     Route::post('/posts/{post}/verify-answer', [ChallengeController::class, 'verifyClassic'])->middleware('throttle:challenge-answers');
     Route::post('/posts/{post}/counter-propose', [ChallengeController::class, 'counterProposeClassic'])->middleware('throttle:counterproposals');

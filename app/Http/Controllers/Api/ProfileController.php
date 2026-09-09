@@ -12,6 +12,7 @@ use App\Models\Favorite;
 use App\Models\Like;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\UserBlockService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Query\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
@@ -58,6 +59,7 @@ class ProfileController extends Controller
         $query = trim((string) ($data['query'] ?? ''));
         $perPage = (int) ($data['per_page'] ?? 20);
         $interactionScores = $this->interactionScoresQuery($request->user()->id);
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
         $users = User::query()
             ->leftJoinSub($interactionScores, 'interaction_scores', function ($join): void {
                 $join->on('interaction_scores.target_user_id', '=', 'users.id');
@@ -67,6 +69,7 @@ class ProfileController extends Controller
             ->where('users.id', '!=', $request->user()->id)
             ->where('users.is_admin', false)
             ->where('users.is_suspended', false)
+            ->whereNotIn('users.id', $blockedIds)
             ->when($query !== '', fn (Builder $builder) => $builder
                 ->whereRaw('LOWER(users.display_name) LIKE ?', ['%'.mb_strtolower($query).'%']))
             ->orderByDesc('interaction_score')
@@ -98,11 +101,14 @@ class ProfileController extends Controller
             ->where('owner_id', $request->user()->id)
             ->where('target_user_id', $user->id)
             ->exists();
+        $blocks = app(UserBlockService::class);
 
         return response()->json([
             'message' => 'OK',
             'data' => $this->publicUserProfilePayload($user) + [
                 'is_favorite' => $isFavorite,
+                'is_blocked' => $blocks->isBlockedBy($request->user()->id, $user->id),
+                'blocked_by_user' => $blocks->isBlockedBy($user->id, $request->user()->id),
             ],
         ]);
     }

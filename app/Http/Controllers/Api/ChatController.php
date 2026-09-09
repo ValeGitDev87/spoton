@@ -8,6 +8,7 @@ use App\Models\Message;
 use App\Models\Post;
 use App\Services\Chat\ConversationService;
 use App\Services\Push\PushNotificationService;
+use App\Services\UserBlockService;
 use App\Support\Push\PushNotificationType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,10 @@ use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
-    public function __construct(private readonly ConversationService $conversations) {}
+    public function __construct(
+        private readonly ConversationService $conversations,
+        private readonly UserBlockService $blocks,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -72,6 +76,7 @@ class ChatController extends Controller
         ]);
 
         abort_if($data['user_id'] === $request->user()->id, 422, 'Non puoi aprire una chat con te stesso.');
+        $this->blocks->ensureInteractionAllowed($request->user()->id, $data['user_id']);
 
         $post = isset($data['post_id']) ? Post::query()->findOrFail($data['post_id']) : null;
 
@@ -131,6 +136,10 @@ class ChatController extends Controller
     public function send(Request $request, Chat $chat, PushNotificationService $pushNotificationService): JsonResponse
     {
         abort_unless($chat->hasParticipant($request->user()->id), 403);
+        $recipient = $chat->user_one_id === $request->user()->id
+            ? $chat->userTwo
+            : $chat->userOne;
+        $this->blocks->ensureInteractionAllowed($request->user()->id, $recipient->id);
 
         $data = $request->validate([
             'text' => ['required', 'string', 'min:1', 'max:2000'],
@@ -144,9 +153,6 @@ class ChatController extends Controller
 
         $chat->touch();
 
-        $recipient = $chat->user_one_id === $request->user()->id
-            ? $chat->userTwo
-            : $chat->userOne;
         $maskedGhostSender = $chat->shouldMaskIdentityOf($request->user()->id, $recipient);
         $pushData = [
             'type' => PushNotificationType::NEW_MESSAGE,
@@ -163,6 +169,7 @@ class ChatController extends Controller
             'Nuovo messaggio',
             ($maskedGhostSender ? 'Ghost' : $request->user()->display_name).' ti ha scritto su SpotOn.',
             $pushData,
+            $request->user(),
         );
 
         return response()->json([
@@ -174,6 +181,10 @@ class ChatController extends Controller
     public function revealIdentity(Request $request, Chat $chat, PushNotificationService $pushNotificationService): JsonResponse
     {
         abort_unless($chat->hasParticipant($request->user()->id), 403);
+        $recipient = $chat->user_one_id === $request->user()->id
+            ? $chat->userTwo
+            : $chat->userOne;
+        $this->blocks->ensureInteractionAllowed($request->user()->id, $recipient->id);
         abort_unless($chat->isGhost(), 422, 'Questa chat non e Ghost.');
         abort_unless($chat->ghost_owner_id === $request->user()->id, 403);
 
@@ -190,10 +201,6 @@ class ChatController extends Controller
         });
 
         if ($revealedNow) {
-            $recipient = $chat->user_one_id === $request->user()->id
-                ? $chat->userTwo
-                : $chat->userOne;
-
             $pushNotificationService->sendToUser(
                 $recipient,
                 'Identita rivelata',
@@ -202,6 +209,7 @@ class ChatController extends Controller
                     'type' => PushNotificationType::GHOST_IDENTITY_REVEALED,
                     'chat_id' => $chat->id,
                 ],
+                $request->user(),
             );
         }
 

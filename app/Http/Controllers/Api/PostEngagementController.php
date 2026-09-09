@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\PostCommunityVote;
 use App\Models\PostIWasThere;
 use App\Models\PresenceSession;
+use App\Services\UserBlockService;
 use App\Support\PostCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,9 +19,12 @@ class PostEngagementController extends Controller
 {
     public function likes(Request $request, Post $post): JsonResponse
     {
+        app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $post->author_id);
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
         $perPage = min(max((int) $request->query('per_page', 25), 1), 50);
         $likes = $post->likes()
             ->with('user')
+            ->whereNotIn('user_id', $blockedIds)
             ->latest()
             ->paginate($perPage);
 
@@ -44,6 +48,7 @@ class PostEngagementController extends Controller
 
     public function toggleLike(Request $request, Post $post): JsonResponse
     {
+        app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $post->author_id);
         $liked = DB::transaction(function () use ($request, $post): bool {
             $lockedPost = Post::query()->lockForUpdate()->findOrFail($post->id);
 
@@ -82,6 +87,7 @@ class PostEngagementController extends Controller
 
     public function toggleIoCero(Request $request, Post $post): JsonResponse
     {
+        app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $post->author_id);
         abort_unless($post->category === PostCategory::SPOTTED_LOVE, 422, 'Io c\'ero e disponibile solo per Spotted / Amore.');
         abort_if($post->author_id === $request->user()->id, 403, 'Il proprietario non puo usare Io c\'ero sul proprio post.');
 
@@ -132,6 +138,7 @@ class PostEngagementController extends Controller
 
     public function communityVote(Request $request, Post $post): JsonResponse
     {
+        app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $post->author_id);
         $data = $request->validate([
             'vote' => ['required', 'string', Rule::in([
                 PostCommunityVote::VOTE_CONFIRM,

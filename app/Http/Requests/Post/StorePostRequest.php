@@ -4,6 +4,7 @@ namespace App\Http\Requests\Post;
 
 use App\Models\Location;
 use App\Models\User;
+use App\Services\UserBlockService;
 use App\Support\PostCategory;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -141,6 +142,18 @@ class StorePostRequest extends FormRequest
             }
 
             $mentionedUser = $users->get($userId);
+
+            if (
+                $mentionedUser
+                && app(UserBlockService::class)->isBlockedBetween($this->user()->id, $mentionedUser->id)
+            ) {
+                $validator->errors()->add(
+                    'mention_user_ids',
+                    'Non puoi menzionare un utente con cui le interazioni sono bloccate.',
+                );
+
+                continue;
+            }
 
             if (! $mentionedUser || ! $this->textContainsMention($text, $mentionedUser->display_name)) {
                 $validator->errors()->add(

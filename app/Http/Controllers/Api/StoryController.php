@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\SerializesPosts;
 use App\Http\Controllers\Controller;
 use App\Models\Location;
 use App\Models\Post;
+use App\Services\UserBlockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,9 +17,11 @@ class StoryController extends Controller
     public function index(Request $request, Location $location): JsonResponse
     {
         abort_unless($location->isPubliclyVisible(), 404);
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
 
         $posts = Post::query()
             ->with(['author', 'location', 'communityVotes'])
+            ->whereNotIn('author_id', $blockedIds)
             ->where('location_id', $location->id)
             ->where('status', 'active')
             ->where('created_at', '>', now()->subHours(48))

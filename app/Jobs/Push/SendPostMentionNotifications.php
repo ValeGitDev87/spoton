@@ -72,13 +72,13 @@ class SendPostMentionNotifications implements ShouldQueue
             ->where('is_admin', false)
             ->where('is_suspended', false)
             ->get()
-            ->each(function (User $user) use ($push, $title, $body): void {
+            ->each(function (User $user) use ($push, $title, $body, $post): void {
                 $push->sendToUser($user, $title, $body, [
                     'type' => PushNotificationType::USER_MENTIONED,
                     'source' => 'post',
                     'post_id' => $this->postId,
                     'mention_scope' => $this->everyone ? 'everyone' : 'user',
-                ]);
+                ], $post->author);
             });
     }
 }

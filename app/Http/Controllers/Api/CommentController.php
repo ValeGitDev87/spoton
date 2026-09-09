@@ -8,6 +8,7 @@ use App\Models\Favorite;
 use App\Models\Post;
 use App\Models\User;
 use App\Services\Push\PushNotificationService;
+use App\Services\UserBlockService;
 use App\Support\Push\PushNotificationType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,8 +19,10 @@ class CommentController extends Controller
 {
     public function index(Request $request, Post $post): JsonResponse
     {
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
         $comments = $post->comments()
             ->with(['author', 'taggedUser'])
+            ->whereNotIn('author_id', $blockedIds)
             ->oldest()
             ->paginate((int) $request->query('per_page', 50));
 
@@ -42,6 +45,8 @@ class CommentController extends Controller
         ]);
 
         $taggedUserId = $this->resolveTaggedUserId($request->user(), $data['text']);
+        $interactionTargetId = $taggedUserId ?? $post->author_id;
+        app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $interactionTargetId);
 
         $comment = DB::transaction(function () use ($request, $post, $data, $taggedUserId): Comment {
             $comment = $post->comments()->create([
@@ -73,6 +78,7 @@ class CommentController extends Controller
         $favorites = Favorite::query()
             ->with('targetUser')
             ->where('owner_id', $author->id)
+            ->whereNotIn('target_user_id', app(UserBlockService::class)->blockedUserIds($author->id))
             ->get()
             ->sortByDesc(
                 fn (Favorite $favorite): int => mb_strlen(trim($favorite->target_name))
@@ -138,6 +144,7 @@ class CommentController extends Controller
                     'post_id' => $post->id,
                     'comment_id' => $comment->id,
                 ],
+                $author,
             );
 
             return;
@@ -158,6 +165,7 @@ class CommentController extends Controller
                 'post_id' => $post->id,
                 'comment_id' => $comment->id,
             ],
+            $author,
         );
     }
 }

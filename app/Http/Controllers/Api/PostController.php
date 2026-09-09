@@ -13,6 +13,7 @@ use App\Models\Post;
 use App\Services\GeoDistance;
 use App\Services\PostAudioService;
 use App\Services\PostVideoService;
+use App\Services\UserBlockService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -29,9 +30,11 @@ class PostController extends Controller
     public function index(Request $request): JsonResponse
     {
         $perPage = min((int) $request->query('per_page', 15), 50);
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
 
         $posts = Post::query()
             ->with(['author', 'location', 'communityVotes'])
+            ->whereNotIn('author_id', $blockedIds)
             ->when(! $request->query('status'), fn (Builder $query) => $query->where('status', 'active'))
             ->when(! $request->query('status'), fn (Builder $query) => $query->where('expires_at', '>', Carbon::now()))
             ->when($request->query('status'), fn (Builder $query, string $status) => $query->where('status', $status))
@@ -74,7 +77,6 @@ class PostController extends Controller
         $radiusKm = (float) ($request->validated('radius_km') ?? 200);
         $page = (int) ($request->validated('page') ?? 1);
         $perPage = (int) ($request->validated('per_page') ?? 30);
-
         $allPosts = collect($this->nearbyPosts($request, $lat, $lng, $radiusKm));
         $posts = $allPosts->forPage($page, $perPage)->values();
         $lastPage = max(1, (int) ceil($allPosts->count() / $perPage));
@@ -105,9 +107,11 @@ class PostController extends Controller
         $lng = $hasCoordinates ? (float) $request->validated('lng') : null;
         $page = (int) ($request->validated('page') ?? 1);
         $perPage = (int) ($request->validated('per_page') ?? 30);
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
 
         $posts = Post::query()
             ->with(['author', 'location', 'communityVotes'])
+            ->whereNotIn('author_id', $blockedIds)
             ->where('status', 'active')
             ->where('expires_at', '>', Carbon::now())
             ->whereHas('location', fn (Builder $query) => $query->publiclyVisible())
@@ -244,6 +248,8 @@ class PostController extends Controller
 
     public function show(Request $request, Post $post): JsonResponse
     {
+        app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $post->author_id);
+
         return response()->json([
             'message' => 'OK',
             'data' => $this->postPayload($post, $request->user(), detail: true),
@@ -312,8 +318,11 @@ class PostController extends Controller
 
     public function nearbyPosts(Request $request, float $lat, float $lng, float $radiusKm): array
     {
+        $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
+
         return Post::query()
             ->with(['author', 'location', 'communityVotes'])
+            ->whereNotIn('author_id', $blockedIds)
             ->where('status', 'active')
             ->where('expires_at', '>', Carbon::now())
             ->whereHas('location', fn (Builder $query) => $query->publiclyVisible())
