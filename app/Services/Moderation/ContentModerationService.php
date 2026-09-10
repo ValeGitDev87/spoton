@@ -16,11 +16,50 @@ class ContentModerationService
     public function evaluate(?string $text): array
     {
         $normalized = $this->normalize($text ?? '');
+        $deobfuscated = $this->collapseArtificialLetterSpacing($normalized);
+
+        $match = $this->matchPatterns($normalized, (array) config('content_moderation.blocked_patterns', []));
+
+        if ($match === null && $deobfuscated !== $normalized) {
+            $match = $this->matchPatterns(
+                $deobfuscated,
+                (array) config('content_moderation.blocked_patterns', []),
+            );
+        }
+
+        if ($match !== null) {
+            return ['decision' => self::BLOCK, 'matched' => $match];
+        }
+
+        $compactMatch = $this->matchPatterns(
+            $deobfuscated,
+            (array) config('content_moderation.compact_blocked_patterns', []),
+        );
+
+        if ($compactMatch !== null) {
+            return ['decision' => self::BLOCK, 'matched' => $compactMatch];
+        }
 
         foreach ((array) config('content_moderation.blocked_phrases', []) as $phrase) {
             if ($this->contains($normalized, (string) $phrase)) {
                 return ['decision' => self::BLOCK, 'matched' => (string) $phrase];
             }
+        }
+
+        $warningMatch = $this->matchPatterns(
+            $normalized,
+            (array) config('content_moderation.warning_patterns', []),
+        );
+
+        if ($warningMatch === null && $deobfuscated !== $normalized) {
+            $warningMatch = $this->matchPatterns(
+                $deobfuscated,
+                (array) config('content_moderation.warning_patterns', []),
+            );
+        }
+
+        if ($warningMatch !== null) {
+            return ['decision' => self::WARN, 'matched' => $warningMatch];
         }
 
         foreach ((array) config('content_moderation.warning_phrases', []) as $phrase) {
@@ -46,5 +85,53 @@ class ContentModerationService
         $needle = $this->normalize($phrase);
 
         return $needle !== '' && str_contains(" {$normalized} ", " {$needle} ");
+    }
+
+    private function collapseArtificialLetterSpacing(string $text): string
+    {
+        $tokens = preg_split('/\s+/', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $result = [];
+        $singleLetters = [];
+
+        $flushLetters = function () use (&$result, &$singleLetters): void {
+            if ($singleLetters === []) {
+                return;
+            }
+
+            if (count($singleLetters) >= 3) {
+                $result[] = implode('', $singleLetters);
+            } else {
+                array_push($result, ...$singleLetters);
+            }
+
+            $singleLetters = [];
+        };
+
+        foreach ($tokens as $token) {
+            if (strlen($token) === 1) {
+                $singleLetters[] = $token;
+
+                continue;
+            }
+
+            $flushLetters();
+            $result[] = $token;
+        }
+
+        $flushLetters();
+
+        return implode(' ', $result);
+    }
+
+    /** @param array<string, string> $patterns */
+    private function matchPatterns(string $text, array $patterns): ?string
+    {
+        foreach ($patterns as $name => $pattern) {
+            if (preg_match($pattern, $text) === 1) {
+                return (string) $name;
+            }
+        }
+
+        return null;
     }
 }

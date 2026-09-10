@@ -22,6 +22,109 @@ class ContentModerationApiTest extends TestCase
         $this->assertSame(ContentModerationService::BLOCK, $filter->evaluate('T1 4mm4zz0')['decision']);
     }
 
+    public function test_required_threat_and_direct_insult_variants_are_not_permitted(): void
+    {
+        $filter = app(ContentModerationService::class);
+        $hardBlocked = [
+            'ti ammazzo',
+            'ti ammazzi',
+            'ti ammazza',
+            't.i a.m.m.a.z.z.o',
+            'ti   ammazzo',
+            'TI AMMAZZO',
+            'ti ammazzoooo',
+            'ti uccido',
+            'ucciditi',
+            'devi morire',
+        ];
+        $warnings = [
+            'sei un idiota',
+            'sei un idiotaa',
+            'sei uno stronzo',
+            'pezzo di merda',
+        ];
+
+        foreach ($hardBlocked as $text) {
+            $this->assertSame(
+                ContentModerationService::BLOCK,
+                $filter->evaluate($text)['decision'],
+                "La minaccia non e stata classificata block: {$text}",
+            );
+        }
+
+        foreach ($warnings as $text) {
+            $this->assertSame(
+                ContentModerationService::WARN,
+                $filter->evaluate($text)['decision'],
+                "L'insulto diretto non e stato classificato warn: {$text}",
+            );
+        }
+    }
+
+    public function test_additional_threat_and_insult_variants_are_not_permitted(): void
+    {
+        $filter = app(ContentModerationService::class);
+        $blocked = [
+            'ammazzati',
+            'ammazzatevi',
+            'ti uccidi',
+            'uccidetevi',
+            'ti spacco',
+            'ti faccio male',
+            'ti meno',
+            'ti picchio',
+            'ti distruggo',
+            'muori',
+            'siete degli idioti',
+            'sei una cretina',
+            'siete dei cretini',
+            'sei un coglione',
+            'siete dei coglioni',
+            'sei una stronza',
+            'sei un imbecille',
+            'siete degli imbecilli',
+            'sei un deficiente',
+            'siete dei deficienti',
+            'vaffanculo',
+        ];
+
+        foreach ($blocked as $text) {
+            $this->assertNotSame(
+                ContentModerationService::ALLOW,
+                $filter->evaluate($text)['decision'],
+                "Il filtro ha consentito: {$text}",
+            );
+        }
+    }
+
+    public function test_normal_texts_are_allowed_without_obvious_false_positives(): void
+    {
+        $filter = app(ContentModerationService::class);
+        $allowed = [
+            'Il treno arriva alle 18:30 sul binario quattro.',
+            'Concerto bellissimo ieri sera in piazza.',
+            'Qualcuno ha trovato un ombrello rosso?',
+            'La metropolitana oggi è molto affollata.',
+            'Ci vediamo davanti al cinema dopo il film.',
+            'Il romanzo L idiota è disponibile in biblioteca.',
+            'Sto studiando la storia della guerra mondiale.',
+            'La squadra ha distrutto il precedente record sportivo.',
+            'Questo esercizio è davvero difficile.',
+            'Il servizio è lento ma il personale è gentile.',
+            'Vorrei segnalare una strada temporaneamente chiusa.',
+            'La commedia usa un linguaggio ironico.',
+            'I prodotti usati ammazzano gli insetti infestanti.',
+        ];
+
+        foreach ($allowed as $text) {
+            $this->assertSame(
+                ContentModerationService::ALLOW,
+                $filter->evaluate($text)['decision'],
+                "Falso positivo per: {$text}",
+            );
+        }
+    }
+
     public function test_post_and_ghost_post_reject_unacceptable_text_but_allow_normal_text(): void
     {
         $user = User::factory()->create();
@@ -73,6 +176,34 @@ class ContentModerationApiTest extends TestCase
             ->patchJson('/api/me', ['bio' => 'Vaffanculo a tutti'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('bio');
+    }
+
+    public function test_counterproposal_and_community_location_text_are_filtered(): void
+    {
+        $author = User::factory()->create();
+        $other = User::factory()->create([
+            'last_known_latitude' => 40.8518,
+            'last_known_longitude' => 14.2681,
+            'last_location_accuracy_meters' => 10,
+            'last_location_update' => now(),
+        ]);
+        $post = $this->makePost($author);
+
+        $this->actingAs($other, 'sanctum')->postJson('/api/challenges', [
+            'post_id' => $post->id,
+            'target_type' => 'post_author',
+            'mode' => 'question',
+            'question' => 'Sei un deficiente?',
+            'answer' => 'risposta',
+        ])->assertUnprocessable()->assertJsonValidationErrors('question');
+
+        $this->actingAs($other, 'sanctum')->postJson('/api/locations', [
+            'name' => 'Sei un idiota',
+            'city' => 'Napoli',
+            'type' => 'altro',
+            'latitude' => 40.8518,
+            'longitude' => 14.2681,
+        ])->assertUnprocessable()->assertJsonValidationErrors('name');
     }
 
     private function location(): Location
