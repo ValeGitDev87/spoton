@@ -31,10 +31,12 @@ class PostController extends Controller
     {
         $perPage = min((int) $request->query('per_page', 15), 50);
         $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
+        $hiddenPostIds = $request->user()->hiddenPosts()->pluck('post_id');
 
         $posts = Post::query()
             ->with(['author', 'location', 'communityVotes'])
             ->whereNotIn('author_id', $blockedIds)
+            ->whereNotIn('id', $hiddenPostIds)
             ->when(! $request->query('status'), fn (Builder $query) => $query->where('status', 'active'))
             ->when(! $request->query('status'), fn (Builder $query) => $query->where('expires_at', '>', Carbon::now()))
             ->when($request->query('status'), fn (Builder $query, string $status) => $query->where('status', $status))
@@ -108,10 +110,12 @@ class PostController extends Controller
         $page = (int) ($request->validated('page') ?? 1);
         $perPage = (int) ($request->validated('per_page') ?? 30);
         $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
+        $hiddenPostIds = $request->user()->hiddenPosts()->pluck('post_id');
 
         $posts = Post::query()
             ->with(['author', 'location', 'communityVotes'])
             ->whereNotIn('author_id', $blockedIds)
+            ->whereNotIn('id', $hiddenPostIds)
             ->where('status', 'active')
             ->where('expires_at', '>', Carbon::now())
             ->whereHas('location', fn (Builder $query) => $query->publiclyVisible())
@@ -319,10 +323,12 @@ class PostController extends Controller
     public function nearbyPosts(Request $request, float $lat, float $lng, float $radiusKm): array
     {
         $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
+        $hiddenPostIds = $request->user()->hiddenPosts()->pluck('post_id');
 
         return Post::query()
             ->with(['author', 'location', 'communityVotes'])
             ->whereNotIn('author_id', $blockedIds)
+            ->whereNotIn('id', $hiddenPostIds)
             ->where('status', 'active')
             ->where('expires_at', '>', Carbon::now())
             ->whereHas('location', fn (Builder $query) => $query->publiclyVisible())

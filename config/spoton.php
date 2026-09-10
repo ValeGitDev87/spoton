@@ -15,6 +15,12 @@ return [
         'location_retention_hours' => (int) env('SPOTON_LOCATION_RETENTION_HOURS', 24),
         'presence_retention_days' => (int) env('SPOTON_PRESENCE_RETENTION_DAYS', 30),
     ],
+    'terms' => [
+        'version' => env('SPOTON_TERMS_VERSION', '2026-09-10'),
+        'contact_email' => env('SPOTON_TERMS_EMAIL')
+            ?: env('SPOTON_PRIVACY_EMAIL')
+            ?: 'privacy@spotonapp.cloud',
+    ],
     'community_locations' => [
         'daily_limit' => max(1, (int) env('SPOTON_LOCATION_CREATE_DAILY_LIMIT', 3)),
         'max_distance_meters' => max(1, (int) env('SPOTON_LOCATION_CREATE_MAX_DISTANCE_METERS', 1000)),

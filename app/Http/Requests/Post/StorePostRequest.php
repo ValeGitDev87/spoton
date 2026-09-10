@@ -4,6 +4,7 @@ namespace App\Http\Requests\Post;
 
 use App\Models\Location;
 use App\Models\User;
+use App\Rules\AcceptableContent;
 use App\Services\UserBlockService;
 use App\Support\PostCategory;
 use Illuminate\Foundation\Http\FormRequest;
@@ -31,10 +32,10 @@ class StorePostRequest extends FormRequest
                     ])),
             ],
             'location_password' => ['nullable', 'string', 'max:255'],
-            'text' => ['required', 'string', 'min:3', 'max:2000'],
+            'text' => ['required', 'string', 'min:3', 'max:2000', new AcceptableContent],
             'category' => ['sometimes', 'string', Rule::in(PostCategory::values())],
-            'musica' => ['nullable', 'string', 'max:255'],
-            'song_quote' => ['nullable', 'string', 'max:255'],
+            'musica' => ['nullable', 'string', 'max:255', new AcceptableContent],
+            'song_quote' => ['nullable', 'string', 'max:255', new AcceptableContent],
             'audio' => ['nullable', 'file', 'max:1024', 'mimetypes:audio/mp4,audio/x-m4a,audio/aac,audio/mpeg,audio/webm,video/mp4'],
             'audio_duration_seconds' => ['required_with:audio', 'nullable', 'numeric', 'min:0.1', 'max:10'],
             'video' => ['nullable', 'file', 'max:10240', 'mimetypes:video/mp4,video/quicktime,video/x-m4v'],
@@ -50,7 +51,7 @@ class StorePostRequest extends FormRequest
                     ->where('is_suspended', false)),
             ],
             'mention_everyone' => ['sometimes', 'boolean'],
-            'secret_question' => ['nullable', 'string', 'max:500', 'required_with:secret_answer'],
+            'secret_question' => ['nullable', 'string', 'max:500', 'required_with:secret_answer', new AcceptableContent],
             'secret_answer' => ['nullable', 'string', 'max:255', 'required_with:secret_question'],
         ];
     }

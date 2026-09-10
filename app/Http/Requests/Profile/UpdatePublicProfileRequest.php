@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Profile;
 
+use App\Rules\AcceptableContent;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -15,9 +16,9 @@ class UpdatePublicProfileRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'bio' => ['sometimes', 'nullable', 'string', 'max:500'],
-            'motto' => ['sometimes', 'nullable', 'string', 'max:160'],
-            'favorite_song' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'bio' => ['sometimes', 'nullable', 'string', 'max:500', new AcceptableContent],
+            'motto' => ['sometimes', 'nullable', 'string', 'max:160', new AcceptableContent],
+            'favorite_song' => ['sometimes', 'nullable', 'string', 'max:255', new AcceptableContent],
             'show_bio' => ['sometimes', 'boolean'],
             'show_motto' => ['sometimes', 'boolean'],
             'show_favorite_song' => ['sometimes', 'boolean'],

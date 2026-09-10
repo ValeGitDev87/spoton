@@ -9,6 +9,7 @@ use App\Models\Comment;
 use App\Models\Post;
 use App\Models\PostIWasThere;
 use App\Models\User;
+use App\Rules\AcceptableContent;
 use App\Services\Chat\ConversationService;
 use App\Services\Push\PushNotificationService;
 use App\Services\UserBlockService;
@@ -139,7 +140,7 @@ class ChallengeController extends Controller
             'target_type' => ['required', 'in:post_author,comment_author'],
             'source_comment_id' => ['required_if:target_type,comment_author', 'nullable', 'uuid', 'exists:comments,id'],
             'mode' => ['nullable', 'in:direct,question'],
-            'question' => ['required_if:mode,question', 'nullable', 'string', 'max:500'],
+            'question' => ['required_if:mode,question', 'nullable', 'string', 'max:500', new AcceptableContent],
             'answer' => ['required_if:mode,question', 'nullable', 'string', 'max:255'],
         ]);
 
@@ -291,7 +292,7 @@ class ChallengeController extends Controller
         abort_if(! $post->secret_answer_hash, 422, 'Questo post non ha una domanda di verifica.');
 
         $data = $request->validate([
-            'text' => ['required', 'string', 'min:3', 'max:1000'],
+            'text' => ['required', 'string', 'min:3', 'max:1000', new AcceptableContent],
         ]);
 
         $challenge = Challenge::query()->create([
@@ -323,7 +324,7 @@ class ChallengeController extends Controller
         abort_unless(in_array($challenge->status, [Challenge::STATUS_PENDING, Challenge::STATUS_REJECTED], true), 422);
 
         $data = $request->validate([
-            'text' => ['required', 'string', 'min:3', 'max:1000'],
+            'text' => ['required', 'string', 'min:3', 'max:1000', new AcceptableContent],
         ]);
 
         $challenge->update([

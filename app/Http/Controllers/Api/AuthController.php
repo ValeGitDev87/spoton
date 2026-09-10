@@ -19,7 +19,12 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
-        $user = User::query()->create($request->validated());
+        $data = $request->safe()->except('terms_accepted');
+        $user = User::query()->create([
+            ...$data,
+            'terms_accepted_at' => now(),
+            'terms_version' => config('spoton.terms.version'),
+        ]);
 
         event(new Registered($user));
 

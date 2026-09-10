@@ -7,6 +7,7 @@ use App\Models\Comment;
 use App\Models\Favorite;
 use App\Models\Post;
 use App\Models\User;
+use App\Rules\AcceptableContent;
 use App\Services\Push\PushNotificationService;
 use App\Services\UserBlockService;
 use App\Support\Push\PushNotificationType;
@@ -41,7 +42,7 @@ class CommentController extends Controller
     public function store(Request $request, Post $post): JsonResponse
     {
         $data = $request->validate([
-            'text' => ['required', 'string', 'min:1', 'max:1000'],
+            'text' => ['required', 'string', 'min:1', 'max:1000', new AcceptableContent],
         ]);
 
         $taggedUserId = $this->resolveTaggedUserId($request->user(), $data['text']);

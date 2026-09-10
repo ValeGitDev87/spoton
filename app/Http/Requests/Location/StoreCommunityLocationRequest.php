@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Location;
 
+use App\Rules\AcceptableContent;
 use App\Support\LocationType;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -29,8 +30,8 @@ class StoreCommunityLocationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:3', 'max:100'],
-            'city' => ['required', 'string', 'min:2', 'max:120'],
+            'name' => ['required', 'string', 'min:3', 'max:100', new AcceptableContent],
+            'city' => ['required', 'string', 'min:2', 'max:120', new AcceptableContent],
             'type' => ['required', 'string', Rule::in(LocationType::codes())],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],

@@ -20,7 +20,9 @@ class ReportController extends Controller
             ->with(['reporter', 'reportable', 'reviewer'])
             ->when($request->query('status'), fn ($query, string $status) => $query->where('status', $status))
             ->when($request->query('target_type'), fn ($query, string $type) => $query->where('reportable_type', $type))
-            ->latest()
+            ->orderByRaw("CASE WHEN status = 'pending' THEN 0 ELSE 1 END")
+            ->orderByRaw("CASE WHEN status = 'pending' THEN created_at END ASC")
+            ->orderByDesc('created_at')
             ->paginate(20)
             ->withQueryString();
 

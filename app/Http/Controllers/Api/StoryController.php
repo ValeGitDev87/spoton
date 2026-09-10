@@ -18,10 +18,12 @@ class StoryController extends Controller
     {
         abort_unless($location->isPubliclyVisible(), 404);
         $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
+        $hiddenPostIds = $request->user()->hiddenPosts()->pluck('post_id');
 
         $posts = Post::query()
             ->with(['author', 'location', 'communityVotes'])
             ->whereNotIn('author_id', $blockedIds)
+            ->whereNotIn('id', $hiddenPostIds)
             ->where('location_id', $location->id)
             ->where('status', 'active')
             ->where('created_at', '>', now()->subHours(48))

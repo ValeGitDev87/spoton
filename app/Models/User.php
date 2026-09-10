@@ -47,6 +47,8 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'last_known_longitude',
         'last_location_accuracy_meters',
         'last_location_update',
+        'terms_accepted_at',
+        'terms_version',
     ];
 
     protected $keyType = 'string';
@@ -76,6 +78,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'karma' => 'integer',
             'last_location_update' => 'datetime',
             'last_location_accuracy_meters' => 'integer',
+            'terms_accepted_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -158,6 +161,11 @@ class User extends Authenticatable implements MustVerifyEmailContract
     public function blockedByUsers(): HasMany
     {
         return $this->hasMany(UserBlock::class, 'blocked_id');
+    }
+
+    public function hiddenPosts(): HasMany
+    {
+        return $this->hasMany(HiddenPost::class);
     }
 
     public function sendEmailVerificationNotification(): void

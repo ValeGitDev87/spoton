@@ -31,6 +31,10 @@ Route::get('/media/share/{media}', SharedPostMediaController::class)->name('post
 Route::view('/privacy', 'legal.privacy', [
     'contactEmail' => config('spoton.privacy.contact_email'),
 ])->name('privacy');
+Route::view('/terms', 'legal.terms', [
+    'contactEmail' => config('spoton.terms.contact_email'),
+    'termsVersion' => config('spoton.terms.version'),
+])->name('terms');
 Route::view('/delete-account', 'legal.delete-account', [
     'contactEmail' => config('spoton.privacy.contact_email'),
 ])->name('delete-account');

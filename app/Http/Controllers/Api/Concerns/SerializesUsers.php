@@ -28,6 +28,9 @@ trait SerializesUsers
             'is_admin' => $user->is_admin,
             'can_mention_everyone' => (bool) $user->can_mention_everyone,
             'is_suspended' => (bool) $user->is_suspended,
+            'terms_accepted' => $user->terms_accepted_at !== null
+                && $user->terms_version === (string) config('spoton.terms.version'),
+            'terms_version' => $user->terms_version,
         ];
     }
 

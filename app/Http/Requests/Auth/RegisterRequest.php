@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Rules\AcceptableContent;
 use Illuminate\Foundation\Http\FormRequest;
 
 class RegisterRequest extends FormRequest
@@ -16,7 +17,8 @@ class RegisterRequest extends FormRequest
         return [
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
-            'display_name' => ['required', 'string', 'min:2', 'max:120'],
+            'display_name' => ['required', 'string', 'min:2', 'max:120', new AcceptableContent],
+            'terms_accepted' => ['required', 'accepted'],
         ];
     }
 }

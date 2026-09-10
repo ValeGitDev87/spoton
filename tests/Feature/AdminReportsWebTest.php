@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class AdminReportsWebTest extends TestCase
@@ -73,6 +74,27 @@ class AdminReportsWebTest extends TestCase
             ->actingAs(User::factory()->create())
             ->get('/admin/reports')
             ->assertForbidden();
+    }
+
+    public function test_pending_reports_are_oldest_first_and_overdue_sla_is_visible(): void
+    {
+        Carbon::setTestNow('2026-09-10 12:00:00');
+        $admin = User::factory()->create(['is_admin' => true]);
+        $newerReporter = User::factory()->create(['display_name' => 'Segnalante recente']);
+        $olderReporter = User::factory()->create(['display_name' => 'Segnalante precedente']);
+        $newer = $this->report($newerReporter, $this->postBy(User::factory()->create()));
+        $older = $this->report($olderReporter, $this->postBy(User::factory()->create()));
+        $newer->forceFill(['created_at' => now()->subHour()])->saveQuietly();
+        $older->forceFill(['created_at' => now()->subHours(25)])->saveQuietly();
+
+        $response = $this->actingAs($admin)->get('/admin/reports')->assertOk();
+        $response->assertSeeInOrder([
+            'Segnalante precedente',
+            'OLTRE SLA 24h',
+            'Segnalante recente',
+        ]);
+
+        Carbon::setTestNow();
     }
 
     private function report(User $reporter, Post|User $target): Report

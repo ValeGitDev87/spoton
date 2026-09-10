@@ -35,6 +35,7 @@ class ItalianValidationApiTest extends TestCase
                 'email' => 'esistente@example.com',
                 'password' => 'breve',
                 'password_confirmation' => 'diversa',
+                'terms_accepted' => true,
             ])
             ->assertUnprocessable()
             ->assertJsonPath(

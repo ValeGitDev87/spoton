@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Chat;
 use App\Models\Message;
 use App\Models\Post;
+use App\Rules\AcceptableContent;
 use App\Services\Chat\ConversationService;
 use App\Services\Push\PushNotificationService;
 use App\Services\UserBlockService;
@@ -142,7 +143,7 @@ class ChatController extends Controller
         $this->blocks->ensureInteractionAllowed($request->user()->id, $recipient->id);
 
         $data = $request->validate([
-            'text' => ['required', 'string', 'min:1', 'max:2000'],
+            'text' => ['required', 'string', 'min:1', 'max:2000', new AcceptableContent],
         ]);
 
         $message = $chat->messages()->create([

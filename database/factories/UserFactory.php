@@ -30,6 +30,8 @@ class UserFactory extends Factory
             'avatar_color' => fake()->hexColor(),
             'is_admin' => false,
             'email_verified_at' => now(),
+            'terms_accepted_at' => now(),
+            'terms_version' => config('spoton.terms.version'),
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];

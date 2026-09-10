@@ -110,6 +110,11 @@ class Post extends Model
         return $this->hasMany(PostCommunityVote::class);
     }
 
+    public function hiddenByUsers(): HasMany
+    {
+        return $this->hasMany(HiddenPost::class);
+    }
+
     public function shareMedia(): HasMany
     {
         return $this->hasMany(PostShareMedia::class);

@@ -15,15 +15,18 @@ use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\MapController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\PostEngagementController;
+use App\Http\Controllers\Api\PostVisibilityController;
 use App\Http\Controllers\Api\PresenceController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PushTokenController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\StoryController;
+use App\Http\Controllers\Api\TermsAcceptanceController;
 use App\Http\Controllers\Api\UserBlockController;
 use App\Http\Controllers\Api\UserNotificationController;
 use App\Http\Middleware\EnsureAdmin;
 use App\Http\Middleware\EnsureNotSuspended;
+use App\Http\Middleware\EnsureTermsAccepted;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:10,1');
@@ -33,85 +36,91 @@ Route::post('/auth/reset-password', [AuthPasswordController::class, 'reset'])->m
 
 Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (): void {
     Route::get('/me', [AuthController::class, 'me']);
-    Route::patch('/me', [ProfileController::class, 'update']);
-    Route::patch('/me/public-profile', [ProfileController::class, 'updatePublicProfile']);
     Route::delete('/me', [AccountController::class, 'destroy'])->middleware('throttle:5,1');
     Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::post('/auth/email/verification-notification', [EmailVerificationController::class, 'store'])->middleware('throttle:3,1');
-    Route::patch('/auth/password', [AuthPasswordController::class, 'update'])->middleware('throttle:5,1');
-    Route::put('/me/push-tokens/{deviceId}', [PushTokenController::class, 'upsert']);
-    Route::delete('/me/push-tokens/{deviceId}', [PushTokenController::class, 'destroy']);
-    Route::get('/notifications', [UserNotificationController::class, 'index']);
-    Route::get('/notifications/unread-count', [UserNotificationController::class, 'unreadCount']);
-    Route::patch('/notifications/read-all', [UserNotificationController::class, 'markAllRead']);
-    Route::patch('/notifications/{notification}/read', [UserNotificationController::class, 'markRead']);
-    Route::post('/dev/push/test', DevPushTestController::class)->middleware('throttle:5,1');
-    Route::post('/presence/ping', [PresenceController::class, 'ping']);
-    Route::get('/users/me/stats', [ProfileController::class, 'stats']);
-    Route::get('/users/me/posts', [ProfileController::class, 'posts']);
-    Route::get('/users/me/karma', [ProfileController::class, 'karma']);
-    Route::get('/users/search', [ProfileController::class, 'searchUsers']);
-    Route::get('/users/me/blocked', [UserBlockController::class, 'index']);
-    Route::delete('/users/me/blocked/{userBlock}', [UserBlockController::class, 'destroy']);
-    Route::get('/users/{user}/public-profile', [ProfileController::class, 'publicProfile']);
-    Route::post('/users/{user}/block', [UserBlockController::class, 'store'])->middleware('throttle:10,1');
-    Route::delete('/users/{user}/block', [UserBlockController::class, 'destroyForUser']);
-    Route::post('/users/me/photos', [ProfileController::class, 'storePhoto']);
-    Route::delete('/users/me/photos/{photoId}', [ProfileController::class, 'destroyPhoto']);
+    Route::post('/me/terms', [TermsAcceptanceController::class, 'store'])->middleware('throttle:5,1');
 
-    Route::get('/favorites', [FavoriteController::class, 'index']);
-    Route::post('/favorites', [FavoriteController::class, 'store']);
-    Route::delete('/favorites/users/{user}', [FavoriteController::class, 'destroyUser']);
-    Route::delete('/favorites/{targetName}', [FavoriteController::class, 'destroy']);
+    Route::middleware(EnsureTermsAccepted::class)->group(function (): void {
+        Route::patch('/me', [ProfileController::class, 'update']);
+        Route::patch('/me/public-profile', [ProfileController::class, 'updatePublicProfile']);
+        Route::post('/auth/email/verification-notification', [EmailVerificationController::class, 'store'])->middleware('throttle:3,1');
+        Route::patch('/auth/password', [AuthPasswordController::class, 'update'])->middleware('throttle:5,1');
+        Route::put('/me/push-tokens/{deviceId}', [PushTokenController::class, 'upsert']);
+        Route::delete('/me/push-tokens/{deviceId}', [PushTokenController::class, 'destroy']);
+        Route::get('/notifications', [UserNotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [UserNotificationController::class, 'unreadCount']);
+        Route::patch('/notifications/read-all', [UserNotificationController::class, 'markAllRead']);
+        Route::patch('/notifications/{notification}/read', [UserNotificationController::class, 'markRead']);
+        Route::post('/dev/push/test', DevPushTestController::class)->middleware('throttle:5,1');
+        Route::post('/presence/ping', [PresenceController::class, 'ping']);
+        Route::get('/users/me/stats', [ProfileController::class, 'stats']);
+        Route::get('/users/me/posts', [ProfileController::class, 'posts']);
+        Route::get('/users/me/karma', [ProfileController::class, 'karma']);
+        Route::get('/users/search', [ProfileController::class, 'searchUsers']);
+        Route::get('/users/me/blocked', [UserBlockController::class, 'index']);
+        Route::delete('/users/me/blocked/{userBlock}', [UserBlockController::class, 'destroy']);
+        Route::get('/users/{user}/public-profile', [ProfileController::class, 'publicProfile']);
+        Route::post('/users/{user}/block', [UserBlockController::class, 'store'])->middleware('throttle:10,1');
+        Route::delete('/users/{user}/block', [UserBlockController::class, 'destroyForUser']);
+        Route::post('/users/me/photos', [ProfileController::class, 'storePhoto']);
+        Route::delete('/users/me/photos/{photoId}', [ProfileController::class, 'destroyPhoto']);
 
-    Route::get('/chats', [ChatController::class, 'index']);
-    Route::post('/chats/open', [ChatController::class, 'open'])->middleware('throttle:messages');
-    Route::get('/chats/{chat}/messages', [ChatController::class, 'messages']);
-    Route::post('/chats/{chat}/messages', [ChatController::class, 'send'])->middleware('throttle:messages');
-    Route::post('/chats/{chat}/reveal-identity', [ChatController::class, 'revealIdentity'])->middleware('throttle:5,1');
-    Route::post('/chats/{chat}/block-participant', [UserBlockController::class, 'storeForChat'])->middleware('throttle:10,1');
-    Route::delete('/chats/{chat}', [ChatController::class, 'destroy']);
+        Route::get('/favorites', [FavoriteController::class, 'index']);
+        Route::post('/favorites', [FavoriteController::class, 'store']);
+        Route::delete('/favorites/users/{user}', [FavoriteController::class, 'destroyUser']);
+        Route::delete('/favorites/{targetName}', [FavoriteController::class, 'destroy']);
 
-    Route::get('/challenges/pending', [ChallengeController::class, 'pending']);
-    Route::post('/challenges', [ChallengeController::class, 'store'])->middleware('throttle:challenges');
-    Route::post('/challenges/{challenge}/answer', [ChallengeController::class, 'answer'])->middleware('throttle:challenge-answers');
-    Route::post('/challenges/{challenge}/counter-propose', [ChallengeController::class, 'counterPropose'])->middleware('throttle:counterproposals');
-    Route::post('/challenges/{challenge}/counter-review', [ChallengeController::class, 'counterReview'])->middleware('throttle:counterproposals');
+        Route::get('/chats', [ChatController::class, 'index']);
+        Route::post('/chats/open', [ChatController::class, 'open'])->middleware('throttle:messages');
+        Route::get('/chats/{chat}/messages', [ChatController::class, 'messages']);
+        Route::post('/chats/{chat}/messages', [ChatController::class, 'send'])->middleware('throttle:messages');
+        Route::post('/chats/{chat}/reveal-identity', [ChatController::class, 'revealIdentity'])->middleware('throttle:5,1');
+        Route::post('/chats/{chat}/block-participant', [UserBlockController::class, 'storeForChat'])->middleware('throttle:10,1');
+        Route::delete('/chats/{chat}', [ChatController::class, 'destroy']);
 
-    Route::get('/locations', [LocationController::class, 'index']);
-    Route::get('/locations/mine', [CommunityLocationController::class, 'mine']);
-    Route::get('/locations/duplicates', [CommunityLocationController::class, 'duplicates']);
-    Route::post('/locations', [CommunityLocationController::class, 'store'])
-        ->middleware('throttle:locations-create');
-    Route::get('/locations/story-feed', [LocationController::class, 'storyFeed']);
-    Route::get('/locations/nearby', [LocationController::class, 'nearby']);
-    Route::get('/locations/{location}', [LocationController::class, 'show']);
-    Route::post('/locations/{location}/verify-access', [LocationController::class, 'verifyAccess'])
-        ->middleware('throttle:10,1');
-    Route::get('/locations/{location}/stories', [StoryController::class, 'index']);
-    Route::get('/map', MapController::class);
+        Route::get('/challenges/pending', [ChallengeController::class, 'pending']);
+        Route::post('/challenges', [ChallengeController::class, 'store'])->middleware('throttle:challenges');
+        Route::post('/challenges/{challenge}/answer', [ChallengeController::class, 'answer'])->middleware('throttle:challenge-answers');
+        Route::post('/challenges/{challenge}/counter-propose', [ChallengeController::class, 'counterPropose'])->middleware('throttle:counterproposals');
+        Route::post('/challenges/{challenge}/counter-review', [ChallengeController::class, 'counterReview'])->middleware('throttle:counterproposals');
 
-    Route::get('/posts/feed', [PostController::class, 'feed']);
-    Route::get('/posts/nearby', [PostController::class, 'nearby']);
-    Route::post('/posts/{post}/like', [PostEngagementController::class, 'toggleLike'])->middleware('throttle:engagements');
-    Route::get('/posts/{post}/likes', [PostEngagementController::class, 'likes']);
-    Route::post('/posts/{post}/io-cero', [PostEngagementController::class, 'toggleIoCero'])->middleware('throttle:engagements');
-    Route::post('/posts/{post}/community-vote', [PostEngagementController::class, 'communityVote'])->middleware('throttle:engagements');
-    Route::post('/posts/{post}/block-author', [UserBlockController::class, 'storeForPost'])->middleware('throttle:10,1');
-    Route::get('/posts/{post}/io-cero-users', [PostEngagementController::class, 'ioCeroUsers']);
-    Route::post('/posts/{post}/verify-answer', [ChallengeController::class, 'verifyClassic'])->middleware('throttle:challenge-answers');
-    Route::post('/posts/{post}/counter-propose', [ChallengeController::class, 'counterProposeClassic'])->middleware('throttle:counterproposals');
-    Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
-    Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:comments');
-    Route::post('/posts', [PostController::class, 'store'])->middleware('throttle:posts-create');
-    Route::apiResource('posts', PostController::class)->except('store');
+        Route::get('/locations', [LocationController::class, 'index']);
+        Route::get('/locations/mine', [CommunityLocationController::class, 'mine']);
+        Route::get('/locations/duplicates', [CommunityLocationController::class, 'duplicates']);
+        Route::post('/locations', [CommunityLocationController::class, 'store'])
+            ->middleware('throttle:locations-create');
+        Route::get('/locations/story-feed', [LocationController::class, 'storyFeed']);
+        Route::get('/locations/nearby', [LocationController::class, 'nearby']);
+        Route::get('/locations/{location}', [LocationController::class, 'show']);
+        Route::post('/locations/{location}/verify-access', [LocationController::class, 'verifyAccess'])
+            ->middleware('throttle:10,1');
+        Route::get('/locations/{location}/stories', [StoryController::class, 'index']);
+        Route::get('/map', MapController::class);
 
-    Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:reports');
+        Route::get('/posts/feed', [PostController::class, 'feed']);
+        Route::get('/posts/nearby', [PostController::class, 'nearby']);
+        Route::post('/posts/{post}/like', [PostEngagementController::class, 'toggleLike'])->middleware('throttle:engagements');
+        Route::get('/posts/{post}/likes', [PostEngagementController::class, 'likes']);
+        Route::post('/posts/{post}/io-cero', [PostEngagementController::class, 'toggleIoCero'])->middleware('throttle:engagements');
+        Route::post('/posts/{post}/community-vote', [PostEngagementController::class, 'communityVote'])->middleware('throttle:engagements');
+        Route::post('/posts/{post}/block-author', [UserBlockController::class, 'storeForPost'])->middleware('throttle:10,1');
+        Route::post('/posts/{post}/hide', [PostVisibilityController::class, 'store']);
+        Route::delete('/posts/{post}/hide', [PostVisibilityController::class, 'destroy']);
+        Route::get('/posts/{post}/io-cero-users', [PostEngagementController::class, 'ioCeroUsers']);
+        Route::post('/posts/{post}/verify-answer', [ChallengeController::class, 'verifyClassic'])->middleware('throttle:challenge-answers');
+        Route::post('/posts/{post}/counter-propose', [ChallengeController::class, 'counterProposeClassic'])->middleware('throttle:counterproposals');
+        Route::get('/posts/{post}/comments', [CommentController::class, 'index']);
+        Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->middleware('throttle:comments');
+        Route::post('/posts', [PostController::class, 'store'])->middleware('throttle:posts-create');
+        Route::apiResource('posts', PostController::class)->except('store');
 
-    Route::middleware(EnsureAdmin::class)
-        ->prefix('admin')
-        ->group(function (): void {
-            Route::patch('/locations/{location}/moderation', [AdminLocationController::class, 'moderate']);
-            Route::apiResource('locations', AdminLocationController::class);
-        });
+        Route::post('/reports', [ReportController::class, 'store'])->middleware('throttle:reports');
+
+        Route::middleware(EnsureAdmin::class)
+            ->prefix('admin')
+            ->group(function (): void {
+                Route::patch('/locations/{location}/moderation', [AdminLocationController::class, 'moderate']);
+                Route::apiResource('locations', AdminLocationController::class);
+            });
+    });
 });

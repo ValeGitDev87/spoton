@@ -30,6 +30,7 @@ class AuthMailApiTest extends TestCase
                 'email' => 'vale@example.com',
                 'password' => 'password123',
                 'password_confirmation' => 'password123',
+                'terms_accepted' => true,
             ])
             ->assertCreated()
             ->assertJsonPath('data.user.email_verified', false);
@@ -47,6 +48,7 @@ class AuthMailApiTest extends TestCase
                 'email' => 'mail@example.com',
                 'password' => 'password123',
                 'password_confirmation' => 'password123',
+                'terms_accepted' => true,
             ])
             ->assertCreated();
 

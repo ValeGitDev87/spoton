@@ -39,7 +39,7 @@
                     <th>Oggetto</th>
                     <th>Motivo</th>
                     <th>Stato</th>
-                    <th>Data</th>
+                    <th>Data / SLA</th>
                     <th style="text-align:right;">Azioni</th>
                 </tr>
             </thead>
@@ -66,7 +66,19 @@
                             @endif
                         </td>
                         <td><span class="badge status-{{ $report->status }}">{{ $report->status }}</span></td>
-                        <td>{{ $report->created_at?->format('d/m/Y H:i') }}</td>
+                        <td>
+                            <div>{{ $report->created_at?->format('d/m/Y H:i') }}</div>
+                            @if ($report->status === 'pending' && $report->created_at)
+                                @php($ageMinutes = (int) $report->created_at->diffInMinutes(now()))
+                                @if ($ageMinutes >= 1440)
+                                    <strong style="color:#b42318;font-size:12px;">OLTRE SLA 24h</strong>
+                                @elseif ($ageMinutes >= 1200)
+                                    <strong style="color:#b54708;font-size:12px;">SLA in scadenza: {{ max(1, (int) ceil((1440 - $ageMinutes) / 60)) }}h</strong>
+                                @else
+                                    <div style="color:#667085;font-size:12px;">Aperta da {{ max(1, (int) ceil($ageMinutes / 60)) }}h</div>
+                                @endif
+                            @endif
+                        </td>
                         <td>
                             @if ($report->status === 'pending')
                                 <div class="actions">
