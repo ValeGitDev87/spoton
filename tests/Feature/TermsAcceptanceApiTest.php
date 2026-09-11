@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class TermsAcceptanceApiTest extends TestCase
@@ -36,23 +37,36 @@ class TermsAcceptanceApiTest extends TestCase
     public function test_legacy_user_can_access_account_and_accept_terms_before_using_app(): void
     {
         $legacy = User::factory()->create([
+            'email' => 'legacy@example.com',
+            'password' => Hash::make('password123'),
             'terms_accepted_at' => null,
             'terms_version' => null,
         ]);
 
-        $this->actingAs($legacy, 'sanctum')->getJson('/api/me')
+        $login = $this->postJson('/api/auth/login', [
+            'email' => 'legacy@example.com',
+            'password' => 'password123',
+        ])->assertOk()->assertJsonPath('data.user.terms_accepted', false);
+        $token = $login->json('data.token');
+
+        $this->withToken($token)->getJson('/api/me')
             ->assertOk()
             ->assertJsonPath('data.user.terms_accepted', false);
 
-        $this->actingAs($legacy, 'sanctum')->getJson('/api/posts/feed')
+        $this->withToken($token)->getJson('/api/posts/feed')
             ->assertForbidden()
             ->assertJsonPath('data.code', 'terms_acceptance_required');
 
-        $this->actingAs($legacy, 'sanctum')->postJson('/api/me/terms', ['accepted' => true])
+        $this->withToken($token)->postJson('/api/me/terms', ['accepted' => false])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('accepted');
+
+        $this->withToken($token)->postJson('/api/me/terms', ['accepted' => true])
             ->assertOk()
             ->assertJsonPath('data.user.terms_accepted', true);
 
-        $this->actingAs($legacy->fresh(), 'sanctum')->getJson('/api/posts/feed')->assertOk();
+        $this->withToken($token)->getJson('/api/posts/feed')->assertOk();
+        $this->assertNotNull($legacy->fresh()->terms_accepted_at);
     }
 
     public function test_terms_are_publicly_available(): void
