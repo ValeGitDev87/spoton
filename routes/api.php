@@ -87,6 +87,8 @@ Route::middleware(['auth:sanctum', EnsureNotSuspended::class])->group(function (
         Route::get('/locations', [LocationController::class, 'index']);
         Route::get('/locations/mine', [CommunityLocationController::class, 'mine']);
         Route::get('/locations/duplicates', [CommunityLocationController::class, 'duplicates']);
+        Route::get('/locations/nearby-candidates', [CommunityLocationController::class, 'nearbyCandidates'])
+            ->middleware('throttle:locations-lookup');
         Route::post('/locations', [CommunityLocationController::class, 'store'])
             ->middleware('throttle:locations-create');
         Route::get('/locations/story-feed', [LocationController::class, 'storyFeed']);

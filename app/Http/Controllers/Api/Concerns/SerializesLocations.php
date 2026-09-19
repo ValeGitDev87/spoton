@@ -17,6 +17,8 @@ trait SerializesLocations
             'city' => $location->city,
             'type' => $location->type,
             'tier' => $location->tier,
+            'location_kind' => $location->location_kind ?: 'poi',
+            'moderation_status' => $location->moderation_status,
             'is_partner' => $location->isPartner(),
             'latitude' => (float) $location->latitude,
             'longitude' => (float) $location->longitude,

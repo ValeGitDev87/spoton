@@ -18,23 +18,43 @@ class StoreCommunityLocationRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge([
-            'name' => Str::squish((string) $this->input('name')),
-            'city' => Str::squish((string) $this->input('city')),
-            'type' => Str::lower(trim((string) $this->input('type'))),
-            'latitude' => $this->normalizeCoordinate($this->input('latitude')),
-            'longitude' => $this->normalizeCoordinate($this->input('longitude')),
-        ]);
+        $prepared = [];
+
+        if ($this->has('name')) {
+            $prepared['name'] = Str::squish((string) $this->input('name'));
+        }
+
+        if ($this->has('city')) {
+            $prepared['city'] = Str::squish((string) $this->input('city'));
+        }
+
+        if ($this->has('type')) {
+            $prepared['type'] = Str::lower(trim((string) $this->input('type')));
+        }
+
+        if ($this->has('latitude')) {
+            $prepared['latitude'] = $this->normalizeCoordinate($this->input('latitude'));
+        }
+
+        if ($this->has('longitude')) {
+            $prepared['longitude'] = $this->normalizeCoordinate($this->input('longitude'));
+        }
+
+        $this->merge($prepared);
     }
 
     public function rules(): array
     {
         return [
-            'name' => ['required', 'string', 'min:3', 'max:100', new AcceptableContent],
-            'city' => ['required', 'string', 'min:2', 'max:120', new AcceptableContent],
-            'type' => ['required', 'string', Rule::in(LocationType::codes())],
-            'latitude' => ['required', 'numeric', 'between:-90,90'],
-            'longitude' => ['required', 'numeric', 'between:-180,180'],
+            'candidate_token' => ['nullable', 'string', 'max:4096'],
+            'name' => [Rule::requiredIf(! $this->filled('candidate_token')), 'string', 'min:3', 'max:100', new AcceptableContent],
+            'city' => [Rule::requiredIf(! $this->filled('candidate_token')), 'string', 'min:2', 'max:120', new AcceptableContent],
+            'type' => [Rule::requiredIf(! $this->filled('candidate_token')), 'string', Rule::in(LocationType::codes())],
+            'latitude' => [Rule::requiredIf(! $this->filled('candidate_token')), 'numeric', 'between:-90,90'],
+            'longitude' => [Rule::requiredIf(! $this->filled('candidate_token')), 'numeric', 'between:-180,180'],
+            'location_kind' => ['nullable', 'string', Rule::in(['poi', 'area'])],
+            'provider' => ['prohibited'],
+            'provider_place_id' => ['prohibited'],
             'short' => ['prohibited'],
             'geo_radius_meters' => ['prohibited'],
             'icon' => ['prohibited'],
@@ -52,7 +72,8 @@ class StoreCommunityLocationRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
-                if ((float) $this->input('latitude') === 0.0
+                if (! $this->filled('candidate_token')
+                    && (float) $this->input('latitude') === 0.0
                     && (float) $this->input('longitude') === 0.0) {
                     $validator->errors()->add(
                         'latitude',

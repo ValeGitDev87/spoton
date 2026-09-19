@@ -28,9 +28,13 @@ class Location extends Model
 
     protected $fillable = [
         'name',
+        'normalized_name',
         'short',
         'city',
         'type',
+        'provider',
+        'provider_place_id',
+        'location_kind',
         'tier',
         'moderation_status',
         'latitude',

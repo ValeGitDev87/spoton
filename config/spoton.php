@@ -29,6 +29,16 @@ return [
         'max_accuracy_meters' => max(1, (int) env('SPOTON_LOCATION_MAX_ACCURACY_METERS', 100)),
         'default_radius_meters' => max(1, (int) env('SPOTON_LOCATION_DEFAULT_RADIUS_METERS', 100)),
     ],
+    'smart_location' => [
+        'provider' => env('SPOTON_PLACE_PROVIDER', 'none'),
+        'google_api_key' => env('GOOGLE_PLACES_API_KEY'),
+        'nearby_radius_meters' => max(25, (int) env('SPOTON_LOCATION_NEARBY_RADIUS_METERS', 150)),
+        'provider_radius_meters' => max(25, (int) env('SPOTON_LOCATION_PROVIDER_RADIUS_METERS', 150)),
+        'candidate_limit' => min(5, max(1, (int) env('SPOTON_LOCATION_CANDIDATE_LIMIT', 5))),
+        'cache_ttl_seconds' => max(60, (int) env('SPOTON_LOCATION_LOOKUP_CACHE_TTL_SECONDS', 86400)),
+        'provider_timeout_seconds' => min(10, max(2, (int) env('SPOTON_LOCATION_PROVIDER_TIMEOUT_SECONDS', 5))),
+        'lookup_per_minute' => max(1, (int) env('SPOTON_LOCATION_LOOKUP_PER_MINUTE', 6)),
+    ],
     'share_video' => [
         'enabled' => (bool) env('SPOTON_SHARE_VIDEO_ENABLED', false),
         'disk' => env('SPOTON_SHARE_VIDEO_DISK', 'local'),
