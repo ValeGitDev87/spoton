@@ -13,13 +13,14 @@ class AccountDeletionService
     public function __construct(
         private readonly PostAudioService $postAudioService,
         private readonly PostVideoService $postVideoService,
+        private readonly PostImageService $postImageService,
         private readonly Media\PostShareMediaService $postShareMediaService,
     ) {}
 
     public function delete(User $user): void
     {
         $posts = $user->posts()
-            ->get(['id', 'audio_disk', 'audio_path', 'video_disk', 'video_path']);
+            ->get(['id', 'audio_disk', 'audio_path', 'video_disk', 'video_path', 'image_disk', 'image_path']);
         $postIds = $posts->pluck('id');
         $localPhotos = $this->localPublicPaths([
             $user->avatar_url,
@@ -53,6 +54,7 @@ class AccountDeletionService
 
         $posts->each(fn (Post $post) => $this->postAudioService->deleteForPost($post));
         $posts->each(fn (Post $post) => $this->postVideoService->deleteForPost($post));
+        $posts->each(fn (Post $post) => $this->postImageService->deleteForPost($post));
 
         foreach ($localPhotos as $path) {
             Storage::disk('public')->delete($path);

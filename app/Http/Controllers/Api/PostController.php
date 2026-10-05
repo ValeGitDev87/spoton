@@ -12,14 +12,15 @@ use App\Jobs\Push\SendPostMentionNotifications;
 use App\Models\Post;
 use App\Services\GeoDistance;
 use App\Services\PostAudioService;
+use App\Services\PostImageService;
 use App\Services\PostVideoService;
 use App\Services\UserBlockService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Throwable;
 
 class PostController extends Controller
 {
@@ -37,8 +38,7 @@ class PostController extends Controller
             ->with(['author', 'location', 'communityVotes'])
             ->whereNotIn('author_id', $blockedIds)
             ->whereNotIn('id', $hiddenPostIds)
-            ->when(! $request->query('status'), fn (Builder $query) => $query->where('status', 'active'))
-            ->when(! $request->query('status'), fn (Builder $query) => $query->where('expires_at', '>', Carbon::now()))
+            ->when(! $request->query('status'), fn (Builder $query) => $query->currentlyActive())
             ->when($request->query('status'), fn (Builder $query, string $status) => $query->where('status', $status))
             ->when($request->query('location_id'), fn (Builder $query, string $locationId) => $query->where('location_id', $locationId))
             ->when($request->query('category'), fn (Builder $query, string $category) => $query->where('category', $category))
@@ -116,8 +116,7 @@ class PostController extends Controller
             ->with(['author', 'location', 'communityVotes'])
             ->whereNotIn('author_id', $blockedIds)
             ->whereNotIn('id', $hiddenPostIds)
-            ->where('status', 'active')
-            ->where('expires_at', '>', Carbon::now())
+            ->currentlyActive()
             ->whereHas('location', fn (Builder $query) => $query->publiclyVisible())
             ->latest()
             ->get()
@@ -193,6 +192,7 @@ class PostController extends Controller
         StorePostRequest $request,
         PostAudioService $postAudioService,
         PostVideoService $postVideoService,
+        PostImageService $postImageService,
     ): JsonResponse {
         $mentionUserIds = array_values(array_unique($request->validated('mention_user_ids', [])));
         $mentionsEveryone = $request->boolean('mention_everyone');
@@ -226,6 +226,17 @@ class PostController extends Controller
                 $request->file('video'),
                 (float) $request->validated('video_duration_seconds'),
             ));
+        }
+
+        if ($request->hasFile('image')) {
+            try {
+                $post->update($postImageService->store($post, $request->file('image')));
+            } catch (Throwable $e) {
+                $postAudioService->deleteForPost($post);
+                $postVideoService->deleteForPost($post);
+                $post->delete();
+                throw $e;
+            }
         }
 
         if ($mentionsEveryone) {
@@ -265,6 +276,7 @@ class PostController extends Controller
         Post $post,
         PostAudioService $postAudioService,
         PostVideoService $postVideoService,
+        PostImageService $postImageService,
     ): JsonResponse {
         abort_unless($post->author_id === $request->user()->id || $request->user()->is_admin, 403);
 
@@ -298,19 +310,30 @@ class PostController extends Controller
             ));
         }
 
+        if ($request->hasFile('image')) {
+            $image = $postImageService->store($post, $request->file('image'));
+            $postImageService->deleteForPost($post);
+            $post->update($image);
+        }
+        if ($request->boolean('remove_image') && ! $request->hasFile('image')) {
+            $postImageService->deleteForPost($post);
+            $post->update($postImageService->emptyPayload());
+        }
+
         return response()->json([
             'message' => 'OK',
             'data' => $this->postPayload($post->refresh(), $request->user(), detail: true),
         ]);
     }
 
-    public function destroy(Request $request, Post $post, PostVideoService $postVideoService): JsonResponse
+    public function destroy(Request $request, Post $post, PostVideoService $postVideoService, PostImageService $postImageService): JsonResponse
     {
         abort_unless($post->author_id === $request->user()->id || $request->user()->is_admin, 403);
 
         $post->update(['status' => 'removed']);
         $postVideoService->deleteForPost($post);
-        $post->update($postVideoService->emptyPayload());
+        $postImageService->deleteForPost($post);
+        $post->update($postVideoService->emptyPayload() + $postImageService->emptyPayload());
 
         return response()->json([
             'message' => 'OK',
@@ -329,8 +352,7 @@ class PostController extends Controller
             ->with(['author', 'location', 'communityVotes'])
             ->whereNotIn('author_id', $blockedIds)
             ->whereNotIn('id', $hiddenPostIds)
-            ->where('status', 'active')
-            ->where('expires_at', '>', Carbon::now())
+            ->currentlyActive()
             ->whereHas('location', fn (Builder $query) => $query->publiclyVisible())
             ->when($request->query('location_id'), fn (Builder $query, string $locationId) => $query->where('location_id', $locationId))
             ->when($request->query('search'), function (Builder $query, string $search): void {
@@ -371,6 +393,8 @@ class PostController extends Controller
             $data['video'],
             $data['video_duration_seconds'],
             $data['remove_video'],
+            $data['image'],
+            $data['remove_image'],
             $data['mention_user_ids'],
             $data['mention_everyone'],
         );

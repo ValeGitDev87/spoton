@@ -15,3 +15,4 @@ Schedule::job(new ExpirePostsJob)->everyMinute()->withoutOverlapping();
 Schedule::job(new CloseStalePresenceSessionsJob)->everyMinute()->withoutOverlapping();
 Schedule::job(new PurgeLocationDataJob)->dailyAt('03:15')->withoutOverlapping();
 Schedule::command('auth:clear-resets')->hourly();
+Schedule::command('spoton:sync-napoli-info')->hourly()->withoutOverlapping();

@@ -30,8 +30,7 @@ class PublicLocationController extends Controller
         );
         $posts = $location->posts()
             ->with('author')
-            ->where('status', 'active')
-            ->where('expires_at', '>', now())
+            ->currentlyActive()
             ->latest()
             ->limit(20)
             ->get()

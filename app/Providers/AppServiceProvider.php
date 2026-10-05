@@ -11,6 +11,8 @@ use App\Observers\PostObserver;
 use App\Services\Media\FfmpegPostShareVideoRenderer;
 use App\Services\Places\GooglePlacesProvider;
 use App\Services\Places\NullPlaceProvider;
+use App\Services\NapoliInfo\SourceProvider;
+use App\Services\NapoliInfo\TangenzialeNapoliProvider;
 use App\Services\Push\ExpoPushGateway;
 use App\Services\Push\LogPushGateway;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -30,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
             ? new ExpoPushGateway
             : new LogPushGateway);
         $this->app->bind(PostShareVideoRenderer::class, FfmpegPostShareVideoRenderer::class);
+        $this->app->bind(SourceProvider::class, TangenzialeNapoliProvider::class);
         $this->app->bind(PlaceProvider::class, fn () => match (config('spoton.smart_location.provider')) {
             'google' => new GooglePlacesProvider,
             default => new NullPlaceProvider,

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -33,6 +34,14 @@ class Post extends Model
         'video_mime',
         'video_size_bytes',
         'video_duration_seconds',
+        'source_name',
+        'source_url',
+        'is_persistent_info',
+        'image_disk',
+        'image_path',
+        'image_url',
+        'image_mime',
+        'image_size_bytes',
         'sighting_date',
         'is_anonymous',
         'mentions_everyone',
@@ -61,6 +70,7 @@ class Post extends Model
             'is_anonymous' => 'boolean',
             'mentions_everyone' => 'boolean',
             'expires_at' => 'datetime',
+            'is_persistent_info' => 'boolean',
             'like_count' => 'integer',
             'comment_count' => 'integer',
             'share_count' => 'integer',
@@ -71,6 +81,7 @@ class Post extends Model
             'audio_size_bytes' => 'integer',
             'audio_duration_seconds' => 'integer',
             'video_size_bytes' => 'integer',
+            'image_size_bytes' => 'integer',
             'video_duration_seconds' => 'integer',
         ];
     }
@@ -132,6 +143,24 @@ class Post extends Model
 
     public function isActive(): bool
     {
-        return $this->status === 'active' && $this->expires_at->isFuture();
+        return $this->status === 'active'
+            && ($this->expires_at?->isFuture() || ($this->is_persistent_info && $this->expires_at === null));
+    }
+
+    public function scopeCurrentlyActive(Builder $query): Builder
+    {
+        return $query->where('status', 'active')->where(function (Builder $query): void {
+            $query->where('expires_at', '>', now())
+                ->orWhere(fn (Builder $query) => $query
+                    ->where('is_persistent_info', true)->whereNull('expires_at'));
+        });
+    }
+
+    public function scopeVisibleInStories(Builder $query): Builder
+    {
+        return $query->currentlyActive()->where(function (Builder $query): void {
+            $query->where('created_at', '>', now()->subHours(48))
+                ->orWhere('is_persistent_info', true);
+        });
     }
 }

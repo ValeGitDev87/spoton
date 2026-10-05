@@ -13,6 +13,9 @@ class ResetsPasswords
 {
     public function reset(array $credentials): string
     {
+        if (User::query()->where('email', $credentials['email'] ?? '')->where('is_system', true)->exists()) {
+            return Password::INVALID_USER;
+        }
         return Password::reset(
             $credentials,
             function (User $user, string $password): void {

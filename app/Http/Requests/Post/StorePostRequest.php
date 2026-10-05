@@ -40,6 +40,7 @@ class StorePostRequest extends FormRequest
             'audio_duration_seconds' => ['required_with:audio', 'nullable', 'numeric', 'min:0.1', 'max:10'],
             'video' => ['nullable', 'file', 'max:10240', 'mimetypes:video/mp4,video/quicktime,video/x-m4v'],
             'video_duration_seconds' => ['required_with:video', 'nullable', 'numeric', 'min:0.1', 'max:15'],
+            'image' => ['nullable', 'file', 'max:5120', 'mimetypes:image/jpeg,image/png'],
             'sighting_date' => ['required', 'date', 'before_or_equal:today'],
             'is_anonymous' => ['sometimes', 'boolean'],
             'mention_user_ids' => ['sometimes', 'array', 'max:10'],

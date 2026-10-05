@@ -39,6 +39,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
         'karma',
         'auth_provider',
         'is_admin',
+        'is_system',
         'can_mention_everyone',
         'is_suspended',
         'suspended_at',
@@ -67,6 +68,7 @@ class User extends Authenticatable implements MustVerifyEmailContract
             'welcome_email_sent_at' => 'datetime',
             'password_changed_at' => 'datetime',
             'is_admin' => 'boolean',
+            'is_system' => 'boolean',
             'can_mention_everyone' => 'boolean',
             'is_suspended' => 'boolean',
             'suspended_at' => 'datetime',
@@ -175,6 +177,8 @@ class User extends Authenticatable implements MustVerifyEmailContract
 
     public function sendPasswordResetNotification($token): void
     {
-        $this->notify(new ResetPasswordNotification($token));
+        if (! $this->is_system) {
+            $this->notify(new ResetPasswordNotification($token));
+        }
     }
 }

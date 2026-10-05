@@ -149,7 +149,7 @@ class PostShareMediaService
     public function isReusable(PostShareMedia $media): bool
     {
         return $media->status === PostShareMedia::STATUS_READY
-            && $media->expires_at?->isFuture()
+            && ($media->expires_at === null || $media->expires_at->isFuture())
             && is_string($media->disk)
             && is_string($media->path)
             && Storage::disk($media->disk)->exists($media->path);

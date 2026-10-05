@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'napoli_info' => [
+        'enabled' => env('SPOTON_NAPOLI_INFO_ENABLED', false),
+        'location_id' => env('SPOTON_NAPOLI_INFO_LOCATION_ID'),
+    ],
     'app_links' => [
         'android_package' => env('SPOTON_ANDROID_PACKAGE', 'it.spotonapp.app'),
         'android_sha256_cert_fingerprints' => array_values(array_filter(array_map(

@@ -41,7 +41,7 @@ class AuthController extends Controller
     {
         $user = User::query()->where('email', $request->validated('email'))->first();
 
-        if (! $user || ! Hash::check($request->validated('password'), $user->password)) {
+        if (! $user || $user->is_system || ! Hash::check($request->validated('password'), $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['Credenziali non valide.'],
             ]);

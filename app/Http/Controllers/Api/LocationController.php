@@ -29,9 +29,7 @@ class LocationController extends Controller
             ->withCount(['posts as active_stories_count' => fn (Builder $query) => $query
                 ->whereNotIn('author_id', $blockedIds)
                 ->whereNotIn('id', $hiddenPostIds)
-                ->where('status', 'active')
-                ->where('created_at', '>', now()->subHours(48))
-                ->where('expires_at', '>', now())])
+                ->visibleInStories()])
             ->publiclyVisible()
             ->when($request->query('search'), function ($query, string $search): void {
                 $query->where(function ($inner) use ($search): void {
@@ -61,9 +59,7 @@ class LocationController extends Controller
         $location->loadCount(['posts as active_stories_count' => fn (Builder $query) => $query
             ->whereNotIn('author_id', $blockedIds)
             ->whereNotIn('id', $hiddenPostIds)
-            ->where('status', 'active')
-            ->where('created_at', '>', now()->subHours(48))
-            ->where('expires_at', '>', now())]);
+            ->visibleInStories()]);
 
         return response()->json([
             'message' => 'OK',
@@ -103,9 +99,7 @@ class LocationController extends Controller
             ->withCount(['posts as active_stories_count' => fn (Builder $query) => $query
                 ->whereNotIn('author_id', $blockedIds)
                 ->whereNotIn('id', $hiddenPostIds)
-                ->where('status', 'active')
-                ->where('created_at', '>', now()->subHours(48))
-                ->where('expires_at', '>', now())])
+                ->visibleInStories()])
             ->publiclyVisible()
             ->get()
             ->map(function (Location $location) use ($lat, $lng): array {
@@ -147,9 +141,7 @@ class LocationController extends Controller
         $activeStories = fn (Builder $query) => $query
             ->whereNotIn('author_id', $blockedIds)
             ->whereNotIn('id', $hiddenPostIds)
-            ->where('status', 'active')
-            ->where('created_at', '>', now()->subHours(48))
-            ->where('expires_at', '>', now());
+            ->visibleInStories();
 
         $locations = Location::query()
             ->withCount(['posts as active_stories_count' => $activeStories])
