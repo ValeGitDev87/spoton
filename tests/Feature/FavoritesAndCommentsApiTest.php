@@ -146,6 +146,48 @@ class FavoritesAndCommentsApiTest extends TestCase
             ->assertJsonPath('data.0.text', 'Primo commento');
     }
 
+    public function test_comment_can_reply_to_comment_on_same_post(): void
+    {
+        $firstAuthor = User::factory()->create(['display_name' => 'Sara']);
+        $replyAuthor = User::factory()->create();
+        $post = $this->makePost();
+        $parentId = $this->actingAs($firstAuthor, 'sanctum')
+            ->postJson("/api/posts/{$post->id}/comments", ['text' => 'Primo commento'])
+            ->assertCreated()->json('data.id');
+
+        $replyId = $this->actingAs($replyAuthor, 'sanctum')
+            ->postJson("/api/posts/{$post->id}/comments", [
+                'text' => 'Sono d’accordo',
+                'parent_comment_id' => $parentId,
+            ])
+            ->assertCreated()
+            ->assertJsonPath('data.parent_comment_id', $parentId)
+            ->assertJsonPath('data.reply_to.display_name', 'Sara')
+            ->json('data.id');
+
+        $this->getJson("/api/posts/{$post->id}/comments")
+            ->assertOk()
+            ->assertJsonPath('data.1.id', $replyId)
+            ->assertJsonPath('data.1.parent_comment_id', $parentId);
+        $this->assertSame(2, $post->refresh()->comment_count);
+    }
+
+    public function test_comment_cannot_reply_to_another_posts_comment(): void
+    {
+        $author = User::factory()->create();
+        $firstPost = $this->makePost();
+        $secondPost = $this->makePost();
+        $commentId = $this->actingAs($author, 'sanctum')
+            ->postJson("/api/posts/{$firstPost->id}/comments", ['text' => 'Altro post'])
+            ->assertCreated()->json('data.id');
+
+        $this->postJson("/api/posts/{$secondPost->id}/comments", [
+            'text' => 'Risposta errata',
+            'parent_comment_id' => $commentId,
+        ])->assertUnprocessable()->assertJsonValidationErrors('parent_comment_id');
+        $this->assertSame(0, $secondPost->refresh()->comment_count);
+    }
+
     private function makePost(): Post
     {
         return Post::query()->create([

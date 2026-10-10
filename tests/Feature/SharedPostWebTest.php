@@ -66,6 +66,54 @@ class SharedPostWebTest extends TestCase
         $this->assertCount(1, Storage::disk('public')->files('share-cards'));
     }
 
+    public function test_photo_post_shows_photo_on_public_page_and_in_social_card(): void
+    {
+        Storage::fake('public');
+        $font = PHP_OS_FAMILY === 'Darwin'
+            ? '/System/Library/Fonts/Supplemental/Arial.ttf'
+            : '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf';
+        $fontBold = PHP_OS_FAMILY === 'Darwin'
+            ? '/System/Library/Fonts/Supplemental/Arial Bold.ttf'
+            : '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf';
+
+        if (! function_exists('imagecreatetruecolor') || ! is_file($font) || ! is_file($fontBold)) {
+            $this->markTestSkipped('GD o font TrueType non disponibili.');
+        }
+
+        config()->set('spoton.share_video.font_path', $font);
+        config()->set('spoton.share_video.font_bold_path', $fontBold);
+        $photo = imagecreatetruecolor(400, 300);
+        imagefill($photo, 0, 0, imagecolorallocate($photo, 230, 20, 100));
+        ob_start();
+        imagejpeg($photo);
+        $bytes = ob_get_clean();
+        imagedestroy($photo);
+        Storage::disk('public')->put('post-images/test.jpg', $bytes);
+
+        $post = $this->createPost([
+            'image_disk' => 'public',
+            'image_path' => 'post-images/test.jpg',
+            'image_url' => '/storage/post-images/test.jpg',
+            'image_mime' => 'image/jpeg',
+        ]);
+
+        $this->get("/p/{$post->id}")
+            ->assertOk()
+            ->assertSee('class="post-image"', false)
+            ->assertSee('src="'.asset('storage/post-images/test.jpg').'"', false)
+            ->assertSee('property="og:image"', false);
+
+        $cards = Storage::disk('public')->files('share-cards');
+        $this->assertCount(1, $cards);
+        $this->assertStringContainsString('-photo-v2-', $cards[0]);
+        $card = imagecreatefromstring(Storage::disk('public')->get($cards[0]));
+        $color = imagecolorsforindex($card, imagecolorat($card, 900, 250));
+        imagedestroy($card);
+        $this->assertGreaterThan(200, $color['red']);
+        $this->assertLessThan(50, $color['green']);
+        $this->assertGreaterThan(70, $color['blue']);
+    }
+
     public function test_ghost_post_never_exposes_real_author(): void
     {
         $post = $this->createPost([
@@ -86,13 +134,15 @@ class SharedPostWebTest extends TestCase
         $post = $this->createPost([
             'expires_at' => now()->subMinute(),
             'text' => 'Contenuto da non mostrare.',
+            'image_url' => '/storage/post-images/private.jpg',
         ]);
 
         $this
             ->get("/p/{$post->id}")
             ->assertOk()
             ->assertSee('Annuncio non disponibile')
-            ->assertDontSee('Contenuto da non mostrare.');
+            ->assertDontSee('Contenuto da non mostrare.')
+            ->assertDontSee('post-images/private.jpg');
     }
 
     public function test_app_association_files_are_emitted_only_when_configured(): void

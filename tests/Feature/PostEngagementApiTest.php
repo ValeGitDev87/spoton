@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\Location;
 use App\Models\Like;
+use App\Models\Location;
 use App\Models\Post;
 use App\Models\PresenceSession;
 use App\Models\User;
@@ -155,6 +155,21 @@ class PostEngagementApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.community_confirm_count', 1)
             ->assertJsonPath('data.community_vote_by_me', 'confirm');
+    }
+
+    public function test_official_persistent_info_cannot_be_removed_by_community_votes(): void
+    {
+        $official = User::factory()->create(['is_system' => true]);
+        $viewer = User::factory()->create();
+        $post = $this->makePost($official, PostCategory::WEATHER_TRANSPORT);
+        $post->update(['is_persistent_info' => true, 'expires_at' => null]);
+        $this->markPresent($viewer, $post->location);
+
+        $this->actingAs($viewer, 'sanctum')
+            ->postJson("/api/posts/{$post->id}/community-vote", ['vote' => 'false'])
+            ->assertUnprocessable();
+        $this->assertSame('active', $post->refresh()->status);
+        $this->assertSame(0, $post->community_false_count);
     }
 
     public function test_weather_votes_verify_then_hide_the_post_using_community_thresholds(): void

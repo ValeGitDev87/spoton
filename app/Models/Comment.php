@@ -13,6 +13,7 @@ class Comment extends Model
 
     protected $fillable = [
         'post_id',
+        'parent_id',
         'author_id',
         'tagged_user_id',
         'text',
@@ -25,6 +26,11 @@ class Comment extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
+    }
+
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
     }
 
     public function author(): BelongsTo

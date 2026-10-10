@@ -22,8 +22,9 @@ class CommentController extends Controller
     {
         $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
         $comments = $post->comments()
-            ->with(['author', 'taggedUser'])
+            ->with(['author', 'taggedUser', 'parent.author'])
             ->whereNotIn('author_id', $blockedIds)
+            ->whereDoesntHave('parent', fn ($query) => $query->whereIn('author_id', $blockedIds))
             ->oldest()
             ->paginate((int) $request->query('per_page', 50));
 
@@ -43,15 +44,28 @@ class CommentController extends Controller
     {
         $data = $request->validate([
             'text' => ['required', 'string', 'min:1', 'max:1000', new AcceptableContent],
+            'parent_comment_id' => ['nullable', 'uuid'],
         ]);
+
+        $parent = null;
+        if (! empty($data['parent_comment_id'])) {
+            $parent = $post->comments()->with('author')->find($data['parent_comment_id']);
+            if (! $parent) {
+                throw ValidationException::withMessages([
+                    'parent_comment_id' => ['Il commento a cui rispondi non appartiene a questo annuncio.'],
+                ]);
+            }
+            app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $parent->author_id);
+        }
 
         $taggedUserId = $this->resolveTaggedUserId($request->user(), $data['text']);
         $interactionTargetId = $taggedUserId ?? $post->author_id;
         app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $interactionTargetId);
 
-        $comment = DB::transaction(function () use ($request, $post, $data, $taggedUserId): Comment {
+        $comment = DB::transaction(function () use ($request, $post, $data, $taggedUserId, $parent): Comment {
             $comment = $post->comments()->create([
                 'author_id' => $request->user()->id,
+                'parent_id' => $parent?->id,
                 'tagged_user_id' => $taggedUserId,
                 'text' => $data['text'],
             ]);
@@ -61,7 +75,7 @@ class CommentController extends Controller
             return $comment;
         });
 
-        $comment->load(['author', 'taggedUser']);
+        $comment->load(['author', 'taggedUser', 'parent.author']);
         $this->sendCommentPush($request->user(), $post->refresh(), $comment);
 
         return response()->json([
@@ -116,6 +130,11 @@ class CommentController extends Controller
         return [
             'id' => $comment->id,
             'post_id' => $comment->post_id,
+            'parent_comment_id' => $comment->parent_id,
+            'reply_to' => $comment->parent ? [
+                'id' => $comment->parent->author->id,
+                'display_name' => $comment->parent->author->display_name,
+            ] : null,
             'author' => [
                 'id' => $comment->author->id,
                 'display_name' => $comment->author->display_name,

@@ -29,6 +29,9 @@ class PostSocialCardService
         $disk = (string) config('spoton.social_card.disk', 'public');
         $directory = trim((string) config('spoton.social_card.directory', 'share-cards'), '/');
         $version = (string) config('spoton.share_video.template_version', 'v1');
+        if ($post->image_path) {
+            $version .= '-photo-v2';
+        }
         $stamp = $post->updated_at?->getTimestamp() ?: time();
         $path = "{$directory}/{$post->id}-{$version}-{$stamp}.png";
 
@@ -79,7 +82,8 @@ class PostSocialCardService
         $author = Str::limit($this->publicContent->author($post), 40);
         imagettftext($image, 28, 0, 70, 190, $white, $fontBold, $author);
 
-        $lines = $this->wrap($this->publicContent->text($post), $fontBold, 31, 820, 3);
+        $photo = $this->postImage($post);
+        $lines = $this->wrap($this->publicContent->text($post), $fontBold, 31, $photo ? 680 : 820, 3);
         $y = 260;
 
         foreach ($lines as $line) {
@@ -90,9 +94,20 @@ class PostSocialCardService
         $location = Str::limit($post->location->name.', '.$post->location->city, 70);
         imagettftext($image, 20, 0, 70, 555, $muted, $font, $location);
 
-        imagefilledellipse($image, 1020, 315, 150, 150, $yellow);
-        imagefilledpolygon($image, [1000, 270, 1000, 360, 1070, 315], 3, $ink);
-        imagettftext($image, 16, 0, 914, 430, $muted, $font, $post->audio_path ? 'ASCOLTA' : 'SCOPRI');
+        if ($photo) {
+            $side = min(imagesx($photo), imagesy($photo));
+            imagecopyresampled(
+                $image, $photo, 815, 150,
+                (int) floor((imagesx($photo) - $side) / 2),
+                (int) floor((imagesy($photo) - $side) / 2),
+                350, 350, $side, $side,
+            );
+            imagedestroy($photo);
+        } else {
+            imagefilledellipse($image, 1020, 315, 150, 150, $yellow);
+            imagefilledpolygon($image, [1000, 270, 1000, 360, 1070, 315], 3, $ink);
+            imagettftext($image, 16, 0, 914, 430, $muted, $font, $post->audio_path ? 'ASCOLTA' : 'SCOPRI');
+        }
 
         ob_start();
         imagepng($image, null, 8);
@@ -104,6 +119,17 @@ class PostSocialCardService
         }
 
         return $contents;
+    }
+
+    private function postImage(Post $post): ?\GdImage
+    {
+        if (! $post->image_disk || ! $post->image_path) {
+            return null;
+        }
+
+        $bytes = Storage::disk($post->image_disk)->get($post->image_path);
+
+        return $bytes === null ? null : (@imagecreatefromstring($bytes) ?: null);
     }
 
     /**

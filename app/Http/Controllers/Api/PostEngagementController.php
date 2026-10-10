@@ -138,6 +138,7 @@ class PostEngagementController extends Controller
 
     public function communityVote(Request $request, Post $post): JsonResponse
     {
+        abort_if($post->is_persistent_info && $post->author()->where('is_system', true)->exists(), 422, 'Gli avvisi ufficiali non sono verificabili dalla Community.');
         app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $post->author_id);
         $data = $request->validate([
             'vote' => ['required', 'string', Rule::in([

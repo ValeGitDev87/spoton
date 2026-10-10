@@ -95,6 +95,7 @@
         .author-name { font-size: 15px; font-weight: 800; overflow-wrap: anywhere; }
         .author-meta { color: #98a2b3; font-size: 12px; margin-top: 2px; }
         .post-text { font-size: 19px; line-height: 1.55; margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+        .post-image { border-radius: 8px; display: block; height: auto; margin-top: 20px; max-width: 100%; width: 100%; }
         .song { border-left: 3px solid #ec4899; color: #475467; font-size: 14px; line-height: 1.45; margin: 20px 0 0; padding-left: 12px; overflow-wrap: anywhere; }
         video { background: #111827; border-radius: 8px; display: block; margin-top: 20px; max-height: 70vh; max-width: 100%; width: 100%; }
         audio { margin-top: 20px; max-width: 100%; width: 100%; }
@@ -155,6 +156,10 @@
                     </div>
 
                     <p class="post-text">{{ $post->text }}</p>
+
+                    @if ($postImageUrl)
+                        <img class="post-image" src="{{ $postImageUrl }}" alt="Foto allegata all'annuncio" loading="lazy">
+                    @endif
 
                     @if ($post->song_quote)
                         <p class="song">“{{ $post->song_quote }}”</p>

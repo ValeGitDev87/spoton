@@ -38,6 +38,13 @@ class SharedPostController extends Controller
                 : asset(ltrim($post->video_url, '/'));
         }
 
+        $postImageUrl = null;
+        if ($available && $post->image_url) {
+            $postImageUrl = Str::startsWith($post->image_url, ['http://', 'https://'])
+                ? $post->image_url
+                : asset(ltrim($post->image_url, '/'));
+        }
+
         $imageUrl = $available ? $socialCards->urlFor($post) : asset('images/share/spoton-share.png');
         $imageUrl = Str::startsWith($imageUrl, ['http://', 'https://'])
             ? $imageUrl
@@ -54,6 +61,7 @@ class SharedPostController extends Controller
             'locationAppUrl' => "spoton://l/{$post->location_id}",
             'locationUrl' => route('locations.public', $post->location),
             'post' => $post,
+            'postImageUrl' => $postImageUrl,
             'categoryLabel' => PostCategory::label($post->category),
             'title' => $available
                 ? ($videoUrl
