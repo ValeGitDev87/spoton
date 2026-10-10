@@ -4,6 +4,7 @@ namespace App\Http\Requests\Post;
 
 use App\Rules\AcceptableContent;
 use App\Support\PostCategory;
+use App\Support\SightingDateValidation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,7 +30,8 @@ class UpdatePostRequest extends FormRequest
             'remove_video' => ['sometimes', 'boolean'],
             'image' => ['sometimes', 'nullable', 'file', 'max:5120', 'mimetypes:image/jpeg,image/png'],
             'remove_image' => ['sometimes', 'boolean'],
-            'sighting_date' => ['sometimes', 'date', 'before_or_equal:today'],
+            'sighting_date' => ['sometimes', 'date_format:Y-m-d', 'before_or_equal:'.SightingDateValidation::todayFor($this->input('sighting_timezone'))],
+            'sighting_timezone' => ['sometimes', 'timezone'],
             'is_anonymous' => ['sometimes', 'boolean'],
             'secret_question' => ['sometimes', 'nullable', 'string', 'max:500', 'required_with:secret_answer', new AcceptableContent],
             'secret_answer' => ['sometimes', 'nullable', 'string', 'max:255', 'required_with:secret_question'],

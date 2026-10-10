@@ -107,6 +107,105 @@ class PostsApiTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_rome_today_is_accepted_when_utc_is_still_yesterday(): void
+    {
+        Carbon::setTestNow('2026-10-09 22:13:00');
+
+        $this->actingAs(User::factory()->create(), 'sanctum')->postJson('/api/posts', [
+            'location_id' => $this->location()->id,
+            'text' => 'Avvistamento dopo mezzanotte.',
+            'sighting_date' => '2026-10-10',
+            'sighting_timezone' => 'Europe/Rome',
+        ])->assertCreated()->assertJsonPath('data.sighting_date', '2026-10-10');
+
+        Carbon::setTestNow();
+    }
+
+    public function test_rome_today_is_accepted_during_the_day(): void
+    {
+        Carbon::setTestNow('2026-10-10 12:13:00');
+
+        $this->actingAs(User::factory()->create(), 'sanctum')->postJson('/api/posts', [
+            'location_id' => $this->location()->id,
+            'text' => 'Avvistamento di oggi.',
+            'sighting_date' => '2026-10-10',
+            'sighting_timezone' => 'Europe/Rome',
+        ])->assertCreated()->assertJsonPath('data.sighting_date', '2026-10-10');
+
+        Carbon::setTestNow();
+    }
+
+    public function test_rome_tomorrow_is_rejected_with_an_italian_message(): void
+    {
+        Carbon::setTestNow('2026-10-09 22:13:00');
+
+        $this->actingAs(User::factory()->create(), 'sanctum')->postJson('/api/posts', [
+            'location_id' => $this->location()->id,
+            'text' => 'Avvistamento futuro.',
+            'sighting_date' => '2026-10-11',
+            'sighting_timezone' => 'Europe/Rome',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['sighting_date'])
+            ->assertJsonPath('errors.sighting_date.0', 'La data dell’avvistamento non può essere successiva a oggi.');
+
+        Carbon::setTestNow();
+    }
+
+    public function test_rome_previous_day_is_accepted(): void
+    {
+        Carbon::setTestNow('2026-10-09 22:13:00');
+
+        $this->actingAs(User::factory()->create(), 'sanctum')->postJson('/api/posts', [
+            'location_id' => $this->location()->id,
+            'text' => 'Avvistamento di ieri.',
+            'sighting_date' => '2026-10-09',
+            'sighting_timezone' => 'Europe/Rome',
+        ])->assertCreated()->assertJsonPath('data.sighting_date', '2026-10-09');
+
+        Carbon::setTestNow();
+    }
+
+    public function test_date_that_is_tomorrow_for_the_device_is_rejected_even_after_utc_midnight(): void
+    {
+        Carbon::setTestNow('2026-10-10 02:13:00');
+
+        $this->actingAs(User::factory()->create(), 'sanctum')->postJson('/api/posts', [
+            'location_id' => $this->location()->id,
+            'text' => 'Avvistamento futuro nel fuso locale.',
+            'sighting_date' => '2026-10-10',
+            'sighting_timezone' => 'America/Los_Angeles',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['sighting_date']);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_updated_sighting_date_uses_the_same_device_timezone(): void
+    {
+        Carbon::setTestNow('2026-10-09 22:13:00');
+
+        $user = User::factory()->create();
+        $post = Post::query()->create([
+            'author_id' => $user->id,
+            'location_id' => $this->location()->id,
+            'text' => 'Avvistamento da aggiornare.',
+            'sighting_date' => '2026-10-09',
+            'expires_at' => now()->addDay(),
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($user, 'sanctum')->patchJson("/api/posts/{$post->id}", [
+            'sighting_date' => '2026-10-10',
+            'sighting_timezone' => 'Europe/Rome',
+        ])->assertOk()->assertJsonPath('data.sighting_date', '2026-10-10');
+
+        $this->actingAs($user, 'sanctum')->patchJson("/api/posts/{$post->id}", [
+            'sighting_date' => '2026-10-11',
+            'sighting_timezone' => 'Europe/Rome',
+        ])->assertUnprocessable()->assertJsonValidationErrors(['sighting_date']);
+
+        Carbon::setTestNow();
+    }
+
     public function test_restricted_location_password_is_required_to_create_post(): void
     {
         $user = User::factory()->create();

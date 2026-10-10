@@ -155,7 +155,11 @@ return [
     'ulid' => 'Il campo :attribute deve contenere un ULID valido.',
     'uuid' => 'Il campo :attribute deve contenere un UUID valido.',
 
-    'custom' => [],
+    'custom' => [
+        'sighting_date' => [
+            'before_or_equal' => 'La data dell’avvistamento non può essere successiva a oggi.',
+        ],
+    ],
 
     'attributes' => [
         'email' => 'email',
@@ -189,6 +193,7 @@ return [
         'audio' => 'nota audio',
         'audio_duration_seconds' => 'durata della nota audio',
         'sighting_date' => 'data dell’avvistamento',
+        'sighting_timezone' => 'fuso orario dell’avvistamento',
         'is_anonymous' => 'modalità Ghost',
         'mention_user_ids' => 'persone menzionate',
         'mention_user_ids.*' => 'persona menzionata',

@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Rules\AcceptableContent;
 use App\Services\UserBlockService;
 use App\Support\PostCategory;
+use App\Support\SightingDateValidation;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -41,7 +42,8 @@ class StorePostRequest extends FormRequest
             'video' => ['nullable', 'file', 'max:10240', 'mimetypes:video/mp4,video/quicktime,video/x-m4v'],
             'video_duration_seconds' => ['required_with:video', 'nullable', 'numeric', 'min:0.1', 'max:15'],
             'image' => ['nullable', 'file', 'max:5120', 'mimetypes:image/jpeg,image/png'],
-            'sighting_date' => ['required', 'date', 'before_or_equal:today'],
+            'sighting_date' => ['required', 'date_format:Y-m-d', 'before_or_equal:'.SightingDateValidation::todayFor($this->input('sighting_timezone'))],
+            'sighting_timezone' => ['sometimes', 'timezone'],
             'is_anonymous' => ['sometimes', 'boolean'],
             'mention_user_ids' => ['sometimes', 'array', 'max:10'],
             'mention_user_ids.*' => [

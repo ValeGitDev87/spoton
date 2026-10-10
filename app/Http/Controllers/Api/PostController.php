@@ -397,6 +397,7 @@ class PostController extends Controller
             $data['remove_image'],
             $data['mention_user_ids'],
             $data['mention_everyone'],
+            $data['sighting_timezone'],
         );
 
         if (array_key_exists('song_quote', $data) && ! array_key_exists('musica', $data)) {
