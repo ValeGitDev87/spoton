@@ -62,7 +62,7 @@
         </table>
     </section>
 
-    <section class="panel" style="margin-top:18px;">
+    <section class="panel" id="push-tokens" style="margin-top:18px;">
         <div class="page-head" style="margin-bottom:12px;">
             <div>
                 <h2 style="margin-bottom:4px;">Token push salvati</h2>
