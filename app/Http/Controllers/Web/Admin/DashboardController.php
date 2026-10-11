@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Location;
 use App\Models\Post;
+use App\Models\PushToken;
 use App\Models\Report;
 use App\Models\User;
 use Illuminate\View\View;
@@ -30,6 +31,23 @@ class DashboardController extends Controller
                 ->latest()
                 ->limit(8)
                 ->get(),
+            'pushTokenStats' => [
+                'total' => PushToken::query()->count(),
+                'active' => PushToken::query()->where('is_active', true)->count(),
+                'ios' => PushToken::query()->where('is_active', true)->where('platform', 'ios')->count(),
+                'android' => PushToken::query()->where('is_active', true)->where('platform', 'android')->count(),
+            ],
+            'pushTokens' => PushToken::query()
+                ->select([
+                    'id', 'user_id', 'token_hash', 'device_id', 'platform',
+                    'app_version', 'locale', 'timezone', 'is_active',
+                    'last_seen_at', 'revoked_at', 'created_at', 'updated_at',
+                ])
+                ->with('user:id,display_name,email')
+                ->orderByDesc('updated_at')
+                ->orderByDesc('id')
+                ->paginate(20, ['*'], 'push_page')
+                ->withQueryString(),
         ]);
     }
 }
