@@ -219,7 +219,7 @@
     <div class="shell">
         <aside class="sidebar">
             <a class="nav-link {{ request()->routeIs('admin.dashboard') ? 'active' : '' }}" href="{{ route('admin.dashboard') }}">Dashboard</a>
-            <a class="nav-link" href="{{ route('admin.dashboard') }}#push-tokens">Token push</a>
+            <a class="nav-link {{ request()->routeIs('admin.push-tokens.*') ? 'active' : '' }}" href="{{ route('admin.push-tokens.index') }}">Token push</a>
             <a class="nav-link {{ request()->routeIs('admin.locations.*') ? 'active' : '' }}" href="{{ route('admin.locations.index') }}">Luoghi</a>
             <a class="nav-link {{ request()->routeIs('admin.users.*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">Utenti</a>
             <a class="nav-link {{ request()->routeIs('admin.posts.*') ? 'active' : '' }}" href="{{ route('admin.posts.index') }}">Post</a>

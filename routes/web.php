@@ -5,6 +5,7 @@ use App\Http\Controllers\Web\Admin\DashboardController;
 use App\Http\Controllers\Web\Admin\ExpiredMediaController;
 use App\Http\Controllers\Web\Admin\LocationController;
 use App\Http\Controllers\Web\Admin\PostController;
+use App\Http\Controllers\Web\Admin\PushTokenController;
 use App\Http\Controllers\Web\Admin\ReportController;
 use App\Http\Controllers\Web\Admin\UserController;
 use App\Http\Controllers\Web\AppLinkAssociationController;
@@ -75,6 +76,8 @@ Route::middleware(['auth', EnsureAdmin::class])
     ->name('admin.')
     ->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
+        Route::get('push-tokens', [PushTokenController::class, 'index'])->name('push-tokens.index');
+        Route::get('push-tokens/{pushToken}', [PushTokenController::class, 'show'])->name('push-tokens.show');
         Route::resource('locations', LocationController::class)->except(['show']);
         Route::get('users', [UserController::class, 'index'])->name('users.index');
         Route::patch('users/{user}/status', [UserController::class, 'updateStatus'])->name('users.update-status');
