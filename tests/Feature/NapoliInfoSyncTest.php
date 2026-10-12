@@ -59,12 +59,12 @@ class NapoliInfoSyncTest extends TestCase
         $this->assertSame('weather_transport', $post->category);
         $this->assertTrue($post->author->is_system);
         $this->assertSame('SpotOn Info Napoli', $post->author->display_name);
-        $this->assertSame('/images/share/spoton-symbol.png', $post->author->avatar_url);
+        $this->assertSame('/images/share/spoton-symbol-20261012.png', $post->author->avatar_url);
         $this->assertNull($post->expires_at);
         $viewer = User::factory()->create();
         $this->actingAs($viewer, 'sanctum')->getJson('/api/posts/feed')
             ->assertOk()->assertJsonPath('data.posts.0.author.is_official', true)
-            ->assertJsonPath('data.posts.0.author.avatar_url', '/images/share/spoton-symbol.png')
+            ->assertJsonPath('data.posts.0.author.avatar_url', '/images/share/spoton-symbol-20261012.png')
             ->assertJsonPath('data.posts.0.source_name', 'Tangenziale di Napoli');
 
         $this->travel(49)->hours();

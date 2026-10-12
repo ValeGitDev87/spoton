@@ -15,6 +15,8 @@ use Throwable;
 
 class SyncNapoliInfoCommand extends Command
 {
+    private const AVATAR_URL = '/images/share/spoton-symbol-20261012.png';
+
     protected $signature = 'spoton:sync-napoli-info {--dry-run : Legge la fonte senza scrivere nel database}';
     protected $description = 'Importa avvisi ufficiali sulla viabilità di Napoli';
 
@@ -124,17 +126,17 @@ class SyncNapoliInfoCommand extends Command
             'password' => Str::random(96),
             'auth_provider' => 'system',
             'is_system' => true,
-            'avatar_url' => '/images/share/spoton-symbol.png',
+            'avatar_url' => self::AVATAR_URL,
             'email_verified_at' => now(),
         ]);
         if (! $user->is_system || $user->auth_provider !== 'system') {
             throw new \RuntimeException('Indirizzo account ufficiale già in uso.');
         }
-        if (! $user->hasVerifiedEmail() || $user->avatar_url !== '/images/share/spoton-symbol.png'
+        if (! $user->hasVerifiedEmail() || $user->avatar_url !== self::AVATAR_URL
             || $user->display_name !== 'SpotOn Info Napoli') {
             $user->forceFill([
                 'email_verified_at' => $user->email_verified_at ?? now(),
-                'avatar_url' => '/images/share/spoton-symbol.png',
+                'avatar_url' => self::AVATAR_URL,
                 'display_name' => 'SpotOn Info Napoli',
             ])->save();
         }
