@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Web\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Support\PostCategory;
+use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -15,6 +17,7 @@ class PostController extends Controller
 {
     public function index(Request $request): View
     {
+        $expiredPosts = $this->expiredPostsQuery();
         $posts = Post::query()
             ->with(['author', 'location'])
             ->when($request->query('search'), function ($query, string $search): void {
@@ -27,10 +30,7 @@ class PostController extends Controller
                         ->orWhereHas('location', fn ($location) => $location->where('name', 'like', "%{$search}%"));
                 });
             })
-            ->when($request->query('status') === 'expired', fn ($query) => $query->where(function ($query): void {
-                $query->where('status', 'expired')
-                    ->orWhere(fn ($query) => $query->where('status', 'active')->where('expires_at', '<=', now()));
-            }))
+            ->when($request->query('status') === 'expired', fn (Builder $query) => $this->whereExpired($query, now()))
             ->when($request->query('status') === 'active', fn ($query) => $query->currentlyActive())
             ->when($request->query('status') && ! in_array($request->query('status'), ['active', 'expired'], true),
                 fn ($query) => $query->where('status', $request->query('status')))
@@ -45,6 +45,7 @@ class PostController extends Controller
             'search' => $request->query('search', ''),
             'status' => $request->query('status', ''),
             'category' => $request->query('category', ''),
+            'expiredCount' => $expiredPosts->count(),
         ]);
     }
 
@@ -75,10 +76,7 @@ class PostController extends Controller
 
     public function destroy(Request $request, Post $post): RedirectResponse
     {
-        DB::transaction(function () use ($post): void {
-            $post->reports()->delete();
-            $post->delete();
-        });
+        $this->deletePost($post);
 
         Log::info('spoton.admin.post.deleted', [
             'admin_id' => $request->user()->id,
@@ -86,5 +84,53 @@ class PostController extends Controller
         ]);
 
         return back()->with('status', 'Post e file collegati eliminati definitivamente.');
+    }
+
+    public function destroyExpired(Request $request): RedirectResponse
+    {
+        $request->validate(['confirmation' => ['required', 'in:delete_expired']]);
+
+        $cutoff = now();
+        $deleted = 0;
+        $this->expiredPostsQuery($cutoff)->chunkById(100, function ($posts) use (&$deleted): void {
+            foreach ($posts as $post) {
+                $this->deletePost($post);
+                $deleted++;
+            }
+        });
+
+        Log::info('spoton.admin.posts.expired_deleted', [
+            'admin_id' => $request->user()->id,
+            'deleted_count' => $deleted,
+            'cutoff' => $cutoff->toIso8601String(),
+        ]);
+
+        return redirect()->route('admin.posts.index', ['status' => 'expired'])
+            ->with('status', "Eliminati definitivamente {$deleted} post scaduti e i file collegati.");
+    }
+
+    private function expiredPostsQuery(?CarbonInterface $cutoff = null): Builder
+    {
+        $query = Post::query();
+        $this->whereExpired($query, $cutoff ?? now());
+
+        return $query;
+    }
+
+    private function whereExpired(Builder $query, CarbonInterface $cutoff): Builder
+    {
+        return $query->where(function (Builder $query) use ($cutoff): void {
+            $query->where('status', 'expired')
+                ->orWhere(fn (Builder $query) => $query
+                    ->where('status', 'active')->where('expires_at', '<=', $cutoff));
+        });
+    }
+
+    private function deletePost(Post $post): void
+    {
+        DB::transaction(function () use ($post): void {
+            $post->reports()->delete();
+            $post->delete();
+        });
     }
 }

@@ -81,6 +81,7 @@ Route::middleware(['auth', EnsureAdmin::class])
         Route::patch('users/{user}/status', [UserController::class, 'updateStatus'])->name('users.update-status');
         Route::patch('users/{user}/mention-permission', [UserController::class, 'updateMentionPermission'])->name('users.update-mention-permission');
         Route::get('posts', [PostController::class, 'index'])->name('posts.index');
+        Route::delete('posts/expired', [PostController::class, 'destroyExpired'])->name('posts.destroy-expired');
         Route::patch('posts/{post}/status', [PostController::class, 'updateStatus'])->name('posts.update-status');
         Route::delete('posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');

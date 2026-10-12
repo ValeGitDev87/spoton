@@ -25,6 +25,7 @@ class AdminPostsWebTest extends TestCase
             ->get('/admin/posts')
             ->assertOk()
             ->assertSee('Post da controllare')
+            ->assertDontSee('Elimina tutti gli scaduti')
             ->assertSee($post->author->display_name)
             ->assertSee($post->location->name);
     }
@@ -132,6 +133,75 @@ class AdminPostsWebTest extends TestCase
         foreach ([$imagePath, $audioPath, $videoPath, $sharePath, $cardPath] as $path) {
             Storage::disk('public')->assertMissing($path);
         }
+    }
+
+    public function test_admin_can_delete_all_expired_posts_across_pages_without_touching_other_posts(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['is_admin' => true]);
+        $user = User::factory()->create();
+
+        foreach (range(1, 21) as $index) {
+            $this->makePost("Scaduto {$index}", 'expired');
+        }
+
+        $due = $this->makePost('Scaduto prima del job', 'active');
+        $due->update(['expires_at' => now()->subMinute()]);
+        $due->update([
+            'image_disk' => 'public', 'image_path' => 'post-images/bulk.jpg',
+            'audio_disk' => 'public', 'audio_path' => 'post-audios/bulk.m4a',
+            'video_disk' => 'public', 'video_path' => 'post-videos/bulk.mp4',
+        ]);
+        foreach (['post-images/bulk.jpg', 'post-audios/bulk.m4a', 'post-videos/bulk.mp4'] as $path) {
+            Storage::disk('public')->put($path, 'file');
+        }
+        $due->comments()->create(['author_id' => $user->id, 'text' => 'Commento']);
+        $due->reports()->create([
+            'reporter_id' => $user->id,
+            'reason' => 'spam',
+            'status' => Report::STATUS_PENDING,
+        ]);
+
+        $active = $this->makePost('Ancora attivo', 'active');
+        $removed = $this->makePost('Disattivato', 'removed');
+        $removed->update(['expires_at' => now()->subMinute()]);
+
+        $this->actingAs($admin)
+            ->get('/admin/posts')
+            ->assertOk()
+            ->assertSee('Post scaduti: 22')
+            ->assertSee('Elimina tutti gli scaduti');
+
+        $this->delete('/admin/posts/expired', ['confirmation' => 'delete_expired'])
+            ->assertRedirect('/admin/posts?status=expired')
+            ->assertSessionHas('status', 'Eliminati definitivamente 22 post scaduti e i file collegati.');
+
+        $this->assertDatabaseCount('posts', 2);
+        $this->assertDatabaseHas('posts', ['id' => $active->id]);
+        $this->assertDatabaseHas('posts', ['id' => $removed->id]);
+        $this->assertDatabaseMissing('posts', ['id' => $due->id]);
+        $this->assertDatabaseMissing('comments', ['post_id' => $due->id]);
+        $this->assertDatabaseMissing('reports', ['reportable_type' => 'post', 'reportable_id' => $due->id]);
+        foreach (['post-images/bulk.jpg', 'post-audios/bulk.m4a', 'post-videos/bulk.mp4'] as $path) {
+            Storage::disk('public')->assertMissing($path);
+        }
+    }
+
+    public function test_bulk_expired_deletion_requires_admin_and_explicit_confirmation(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $user = User::factory()->create();
+        $post = $this->makePost('Scaduto', 'expired');
+
+        $this->actingAs($user)
+            ->delete('/admin/posts/expired', ['confirmation' => 'delete_expired'])
+            ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->delete('/admin/posts/expired')
+            ->assertSessionHasErrors('confirmation');
+
+        $this->assertDatabaseHas('posts', ['id' => $post->id]);
     }
 
     public function test_admin_posts_use_compact_pagination_without_unstyled_svg_arrows(): void

@@ -9,6 +9,23 @@
         <div class="alert">{{ session('status') }}</div>
     @endif
 
+    @if ($expiredCount > 0)
+        <section class="panel">
+            <div class="page-head">
+                <div>
+                    <strong>Post scaduti: {{ $expiredCount }}</strong>
+                    <div>Elimina tutti i post scaduti, indipendentemente dai filtri e dalla pagina, con foto, audio e file collegati.</div>
+                </div>
+                <form method="post" action="{{ route('admin.posts.destroy-expired') }}" onsubmit="return confirm('Eliminare definitivamente TUTTI i {{ $expiredCount }} post scaduti e i relativi file? Questa azione non è reversibile.');">
+                    @csrf
+                    @method('DELETE')
+                    <input type="hidden" name="confirmation" value="delete_expired">
+                    <button class="btn danger" type="submit">Elimina tutti gli scaduti</button>
+                </form>
+            </div>
+        </section>
+    @endif
+
     <section class="panel">
         <form class="toolbar" method="get" action="{{ route('admin.posts.index') }}">
             <div style="min-width:280px;">
