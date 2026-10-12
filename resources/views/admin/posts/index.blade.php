@@ -19,8 +19,8 @@
                 <label for="status">Stato</label>
                 <select id="status" name="status">
                     <option value="">Tutti</option>
-                    @foreach (['active', 'expired', 'removed', 'flagged'] as $option)
-                        <option value="{{ $option }}" @selected($status === $option)>{{ ucfirst($option) }}</option>
+                    @foreach (['active' => 'Attivi', 'expired' => 'Scaduti', 'removed' => 'Disattivati', 'flagged' => 'Segnalati'] as $option => $label)
+                        <option value="{{ $option }}" @selected($status === $option)>{{ $label }}</option>
                     @endforeach
                 </select>
             </div>
@@ -75,8 +75,20 @@
                             @endif
                         </td>
                         <td>{{ $post->sighting_date?->format('d/m/Y') }}</td>
-                        <td><span class="badge status-{{ $post->status }}">{{ $post->status }}</span></td>
-                        <td>{{ $post->expires_at?->format('d/m/Y H:i') }}</td>
+                        @php($effectivelyExpired = $post->status === 'expired' || ($post->status === 'active' && $post->expires_at?->isPast()))
+                        <td><span class="badge status-{{ $effectivelyExpired ? 'expired' : $post->status }}">{{ $effectivelyExpired ? 'Scaduto' : (['active' => 'Attivo', 'removed' => 'Disattivato', 'flagged' => 'Segnalato'][$post->status] ?? $post->status) }}</span></td>
+                        <td>
+                            @if ($post->expires_at)
+                                {{ $post->expires_at->format('d/m/Y H:i') }}
+                                @if ($post->expires_at->isPast())
+                                    <div style="color:#b54708;font-size:12px;">Data superata</div>
+                                @endif
+                            @elseif ($post->is_persistent_info)
+                                Permanente
+                            @else
+                                —
+                            @endif
+                        </td>
                         <td>
                             <div class="actions">
                                 @if ($post->status !== 'removed')
@@ -99,6 +111,11 @@
                                     @method('PATCH')
                                     <input type="hidden" name="status" value="flagged">
                                     <button class="btn secondary" type="submit">Flag</button>
+                                </form>
+                                <form method="post" action="{{ route('admin.posts.destroy', $post) }}" onsubmit="return confirm('Eliminare definitivamente questo post e tutti i file collegati? Questa azione non è reversibile.');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button class="btn danger" type="submit">Elimina definitivamente</button>
                                 </form>
                             </div>
                         </td>

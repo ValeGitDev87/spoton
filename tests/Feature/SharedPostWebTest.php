@@ -47,9 +47,9 @@ class SharedPostWebTest extends TestCase
             $this->markTestSkipped('GD o font TrueType non disponibili.');
         }
 
-        config()->set('spoton.share_video.disk', 'public');
-        config()->set('spoton.share_video.font_path', $font);
-        config()->set('spoton.share_video.font_bold_path', $fontBold);
+        config()->set('spoton.social_card.disk', 'public');
+        config()->set('spoton.social_card.font_path', $font);
+        config()->set('spoton.social_card.font_bold_path', $fontBold);
         $post = $this->createPost([
             'audio_disk' => 'public',
             'audio_path' => 'post-audios/social.m4a',
@@ -80,8 +80,8 @@ class SharedPostWebTest extends TestCase
             $this->markTestSkipped('GD o font TrueType non disponibili.');
         }
 
-        config()->set('spoton.share_video.font_path', $font);
-        config()->set('spoton.share_video.font_bold_path', $fontBold);
+        config()->set('spoton.social_card.font_path', $font);
+        config()->set('spoton.social_card.font_bold_path', $fontBold);
         $photo = imagecreatetruecolor(400, 300);
         imagefill($photo, 0, 0, imagecolorallocate($photo, 230, 20, 100));
         ob_start();

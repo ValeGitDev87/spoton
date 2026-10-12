@@ -7,6 +7,8 @@ use App\Models\Post;
 use App\Support\PostCategory;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class PostController extends Controller
@@ -25,7 +27,13 @@ class PostController extends Controller
                         ->orWhereHas('location', fn ($location) => $location->where('name', 'like', "%{$search}%"));
                 });
             })
-            ->when($request->query('status'), fn ($query, string $status) => $query->where('status', $status))
+            ->when($request->query('status') === 'expired', fn ($query) => $query->where(function ($query): void {
+                $query->where('status', 'expired')
+                    ->orWhere(fn ($query) => $query->where('status', 'active')->where('expires_at', '<=', now()));
+            }))
+            ->when($request->query('status') === 'active', fn ($query) => $query->currentlyActive())
+            ->when($request->query('status') && ! in_array($request->query('status'), ['active', 'expired'], true),
+                fn ($query) => $query->where('status', $request->query('status')))
             ->when($request->query('category'), fn ($query, string $category) => $query->where('category', $category))
             ->when($request->query('location_id'), fn ($query, string $locationId) => $query->where('location_id', $locationId))
             ->latest()
@@ -63,5 +71,20 @@ class PostController extends Controller
         }
 
         return back()->with('status', 'Stato post aggiornato.');
+    }
+
+    public function destroy(Request $request, Post $post): RedirectResponse
+    {
+        DB::transaction(function () use ($post): void {
+            $post->reports()->delete();
+            $post->delete();
+        });
+
+        Log::info('spoton.admin.post.deleted', [
+            'admin_id' => $request->user()->id,
+            'post_id' => $post->id,
+        ]);
+
+        return back()->with('status', 'Post e file collegati eliminati definitivamente.');
     }
 }

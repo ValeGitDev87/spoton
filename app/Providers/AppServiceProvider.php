@@ -3,12 +3,10 @@
 namespace App\Providers;
 
 use App\Contracts\PlaceProvider;
-use App\Contracts\PostShareVideoRenderer;
 use App\Contracts\PushGateway;
 use App\Models\Post;
 use App\Models\User;
 use App\Observers\PostObserver;
-use App\Services\Media\FfmpegPostShareVideoRenderer;
 use App\Services\Places\GooglePlacesProvider;
 use App\Services\Places\NullPlaceProvider;
 use App\Services\NapoliInfo\SourceProvider;
@@ -31,7 +29,6 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PushGateway::class, fn () => config('services.push.driver') === 'expo'
             ? new ExpoPushGateway
             : new LogPushGateway);
-        $this->app->bind(PostShareVideoRenderer::class, FfmpegPostShareVideoRenderer::class);
         $this->app->bind(SourceProvider::class, TangenzialeNapoliProvider::class);
         $this->app->bind(PlaceProvider::class, fn () => match (config('spoton.smart_location.provider')) {
             'google' => new GooglePlacesProvider,

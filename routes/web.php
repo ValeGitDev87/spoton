@@ -14,7 +14,6 @@ use App\Http\Controllers\Web\EmailVerificationController;
 use App\Http\Controllers\Web\PasswordResetController;
 use App\Http\Controllers\Web\PublicLocationController;
 use App\Http\Controllers\Web\SharedPostController;
-use App\Http\Controllers\Web\SharedPostMediaController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 
@@ -27,7 +26,6 @@ Route::get('/apple-app-site-association', [AppLinkAssociationController::class, 
 Route::get('/.well-known/assetlinks.json', [AppLinkAssociationController::class, 'android']);
 Route::get('/p/{post}', SharedPostController::class)->name('posts.share');
 Route::get('/l/{location}', PublicLocationController::class)->name('locations.public');
-Route::get('/media/share/{media}', SharedPostMediaController::class)->name('post-share-media.show');
 
 Route::view('/privacy', 'legal.privacy', [
     'contactEmail' => config('spoton.privacy.contact_email'),
@@ -84,6 +82,7 @@ Route::middleware(['auth', EnsureAdmin::class])
         Route::patch('users/{user}/mention-permission', [UserController::class, 'updateMentionPermission'])->name('users.update-mention-permission');
         Route::get('posts', [PostController::class, 'index'])->name('posts.index');
         Route::patch('posts/{post}/status', [PostController::class, 'updateStatus'])->name('posts.update-status');
+        Route::delete('posts/{post}', [PostController::class, 'destroy'])->name('posts.destroy');
         Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
         Route::patch('reports/{report}', [ReportController::class, 'update'])->name('reports.update');
         Route::get('backups', [BackupController::class, 'index'])->name('backups.index');

@@ -19,8 +19,8 @@ class PostSocialCardService
             return $fallback;
         }
 
-        $font = (string) config('spoton.share_video.font_path');
-        $fontBold = (string) config('spoton.share_video.font_bold_path');
+        $font = (string) config('spoton.social_card.font_path');
+        $fontBold = (string) config('spoton.social_card.font_bold_path');
 
         if (! is_file($font) || ! is_file($fontBold)) {
             return $fallback;
@@ -28,7 +28,7 @@ class PostSocialCardService
 
         $disk = (string) config('spoton.social_card.disk', 'public');
         $directory = trim((string) config('spoton.social_card.directory', 'share-cards'), '/');
-        $version = (string) config('spoton.share_video.template_version', 'v1');
+        $version = (string) config('spoton.social_card.template_version', 'v1');
         if ($post->image_path) {
             $version .= '-photo-v2';
         }

@@ -4,12 +4,12 @@
     <div class="page-head">
         <div>
             <h1>Media scaduti</h1>
-            <p style="color:#667085;margin:7px 0 0;">Video generati non piu utilizzabili e pronti per la pulizia.</p>
+            <p style="color:#667085;margin:7px 0 0;">File della vecchia condivisione pronti per la pulizia.</p>
         </div>
         @if ($summary['records'] > 0)
             <form method="post" action="{{ route('admin.expired-media.purge') }}" onsubmit="return confirm('Stai per eliminare {{ $summary['files'] }} file per un totale di {{ $summary['bytes_human'] }}. Continuare?')">
                 @csrf
-                <button class="btn danger" type="submit">Elimina video e risorse scadute</button>
+                <button class="btn danger" type="submit">Elimina file scaduti</button>
             </form>
         @endif
     </div>

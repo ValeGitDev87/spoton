@@ -391,35 +391,7 @@ class PostsApiTest extends TestCase
             ->assertJsonValidationErrors(['audio_duration_seconds']);
     }
 
-    public function test_authenticated_user_can_create_post_with_video(): void
-    {
-        Storage::fake('public');
-
-        $user = User::factory()->create();
-        $location = $this->location();
-
-        $response = $this
-            ->actingAs($user, 'sanctum')
-            ->post('/api/posts', [
-                'location_id' => $location->id,
-                'text' => 'Ti lascio un video.',
-                'sighting_date' => now()->toDateString(),
-                'video_duration_seconds' => 12,
-                'video' => UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'),
-            ], ['Accept' => 'application/json'])
-            ->assertCreated()
-            ->assertJsonPath('data.video.duration_seconds', 12)
-            ->assertJsonPath('data.video.mime', 'video/mp4');
-
-        $post = Post::query()->findOrFail($response->json('data.id'));
-
-        $this->assertNotNull($post->video_path);
-        $this->assertSame('public', $post->video_disk);
-        $this->assertSame(1048576, $post->video_size_bytes);
-        Storage::disk('public')->assertExists($post->video_path);
-    }
-
-    public function test_video_cannot_exceed_fifteen_seconds(): void
+    public function test_video_upload_is_rejected_when_creating_a_post(): void
     {
         Storage::fake('public');
 
@@ -430,13 +402,38 @@ class PostsApiTest extends TestCase
             ->actingAs($user, 'sanctum')
             ->post('/api/posts', [
                 'location_id' => $location->id,
-                'text' => 'Video troppo lungo.',
+                'text' => 'Ti lascio un video.',
                 'sighting_date' => now()->toDateString(),
-                'video_duration_seconds' => 15.1,
+                'video_duration_seconds' => 12,
                 'video' => UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'),
             ], ['Accept' => 'application/json'])
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['video_duration_seconds']);
+            ->assertJsonValidationErrors(['video']);
+
+        $this->assertDatabaseCount('posts', 0);
+    }
+
+    public function test_video_upload_is_rejected_when_editing_a_post(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create();
+        $post = Post::query()->create([
+            'author_id' => $user->id,
+            'location_id' => $this->location()->id,
+            'text' => 'Post senza video',
+            'sighting_date' => now()->toDateString(),
+            'expires_at' => now()->addDay(),
+            'status' => 'active',
+        ]);
+
+        $this
+            ->actingAs($user, 'sanctum')
+            ->patch("/api/posts/{$post->id}", [
+                'video' => UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'),
+            ], ['Accept' => 'application/json'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['video']);
     }
 
     public function test_owner_can_remove_video(): void

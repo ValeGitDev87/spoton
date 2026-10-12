@@ -34,7 +34,11 @@ class ExpirePostsJobTest extends TestCase
         ]);
 
         $postVideoPath = 'post-videos/expired-test.mp4';
+        $postAudioPath = 'post-audios/expired-test.m4a';
         $expired = $this->makePost($user, $location, now()->subMinute(), 'active', [
+            'audio_disk' => 'public',
+            'audio_path' => $postAudioPath,
+            'audio_url' => '/storage/'.$postAudioPath,
             'video_disk' => 'public',
             'video_path' => $postVideoPath,
             'video_url' => '/storage/'.$postVideoPath,
@@ -49,6 +53,7 @@ class ExpirePostsJobTest extends TestCase
         Storage::disk('public')->put($cardPath, 'card');
         Storage::disk('public')->put($shareVideoPath, 'share-video');
         Storage::disk('public')->put($postVideoPath, 'post-video');
+        Storage::disk('public')->put($postAudioPath, 'post-audio');
         PostShareMedia::query()->create([
             'post_id' => $expired->id,
             'template_version' => 'v1',
@@ -79,12 +84,15 @@ class ExpirePostsJobTest extends TestCase
         ]);
         Storage::disk('public')->assertMissing($cardPath);
         Storage::disk('public')->assertMissing($postVideoPath);
+        Storage::disk('public')->assertMissing($postAudioPath);
         Storage::disk('public')->assertMissing($shareVideoPath);
         $this->assertDatabaseMissing('post_share_media', ['post_id' => $expired->id]);
         $this->assertDatabaseHas('posts', [
             'id' => $expired->id,
             'video_path' => null,
             'video_url' => null,
+            'audio_path' => null,
+            'audio_url' => null,
         ]);
 
         Carbon::setTestNow();

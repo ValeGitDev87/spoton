@@ -206,6 +206,121 @@ class PushNotificationApiTest extends TestCase
         ]);
     }
 
+    public function test_reply_notifies_parent_comment_author_on_ios_and_post_owner_on_android(): void
+    {
+        Queue::fake();
+
+        $postOwner = User::factory()->create();
+        $parentAuthor = User::factory()->create();
+        $replyAuthor = User::factory()->create(['display_name' => 'Luca']);
+        $post = $this->makePost($postOwner);
+        $parent = $post->comments()->create([
+            'author_id' => $parentAuthor->id,
+            'text' => 'Primo commento',
+        ]);
+        $iosToken = $this->activeTokenFor($parentAuthor);
+        $androidToken = $this->activeTokenFor($postOwner);
+        $androidToken->update(['platform' => 'android']);
+
+        $replyId = $this
+            ->actingAs($replyAuthor, 'sanctum')
+            ->postJson("/api/posts/{$post->id}/comments", [
+                'text' => 'La mia risposta',
+                'parent_comment_id' => $parent->id,
+            ])
+            ->assertCreated()
+            ->json('data.id');
+
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $parentAuthor->id,
+            'type' => PushNotificationType::NEW_COMMENT,
+            'title' => 'Risposta al tuo commento su SpotOn',
+        ]);
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $postOwner->id,
+            'type' => PushNotificationType::NEW_COMMENT,
+        ]);
+        Queue::assertPushed(SendExpoPushNotification::class, 2);
+        Queue::assertPushed(SendExpoPushNotification::class, function (SendExpoPushNotification $job) use ($iosToken, $post, $parent, $replyId): bool {
+            $tokenIds = (new \ReflectionProperty($job, 'pushTokenIds'))->getValue($job);
+            $data = (new \ReflectionProperty($job, 'data'))->getValue($job);
+
+            return $tokenIds === [$iosToken->id] && $data === [
+                'type' => PushNotificationType::NEW_COMMENT,
+                'post_id' => $post->id,
+                'comment_id' => $replyId,
+                'parent_comment_id' => $parent->id,
+            ];
+        });
+        Queue::assertPushed(SendExpoPushNotification::class, function (SendExpoPushNotification $job) use ($androidToken, $post, $replyId): bool {
+            $tokenIds = (new \ReflectionProperty($job, 'pushTokenIds'))->getValue($job);
+            $data = (new \ReflectionProperty($job, 'data'))->getValue($job);
+
+            return $tokenIds === [$androidToken->id]
+                && $data['type'] === PushNotificationType::NEW_COMMENT
+                && $data['post_id'] === $post->id
+                && $data['comment_id'] === $replyId;
+        });
+    }
+
+    public function test_reply_to_post_owners_comment_does_not_send_duplicate_push(): void
+    {
+        Queue::fake();
+
+        $postOwner = User::factory()->create();
+        $replyAuthor = User::factory()->create();
+        $post = $this->makePost($postOwner);
+        $parent = $post->comments()->create([
+            'author_id' => $postOwner->id,
+            'text' => 'Primo commento',
+        ]);
+        $this->activeTokenFor($postOwner);
+
+        $this
+            ->actingAs($replyAuthor, 'sanctum')
+            ->postJson("/api/posts/{$post->id}/comments", [
+                'text' => 'La mia risposta',
+                'parent_comment_id' => $parent->id,
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseCount('user_notifications', 1);
+        Queue::assertPushed(SendExpoPushNotification::class, 1);
+    }
+
+    public function test_reply_mentioning_parent_author_keeps_single_mention_notification(): void
+    {
+        Queue::fake();
+
+        $parentAuthor = User::factory()->create(['display_name' => 'Sara']);
+        $replyAuthor = User::factory()->create();
+        $post = $this->makePost(User::factory()->create());
+        $parent = $post->comments()->create([
+            'author_id' => $parentAuthor->id,
+            'text' => 'Primo commento',
+        ]);
+        $this->activeTokenFor($parentAuthor);
+
+        $this
+            ->actingAs($replyAuthor, 'sanctum')
+            ->postJson('/api/favorites', ['target_name' => 'Sara'])
+            ->assertCreated();
+
+        $this
+            ->postJson("/api/posts/{$post->id}/comments", [
+                'text' => 'Grazie @Sara',
+                'parent_comment_id' => $parent->id,
+            ])
+            ->assertCreated();
+
+        $this->assertDatabaseHas('user_notifications', [
+            'user_id' => $parentAuthor->id,
+            'type' => PushNotificationType::USER_MENTIONED,
+        ]);
+        $this->assertDatabaseCount('user_notifications', 1);
+        Queue::assertPushed(SendExpoPushNotification::class, 1);
+    }
+
     public function test_inverted_challenge_queues_push_to_target_user(): void
     {
         Queue::fake();

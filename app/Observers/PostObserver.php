@@ -7,6 +7,7 @@ use App\Services\Media\PostShareMediaService;
 use App\Services\Media\PostSocialCardService;
 use App\Services\PostVideoService;
 use App\Services\PostImageService;
+use App\Services\PostAudioService;
 
 class PostObserver
 {
@@ -15,6 +16,7 @@ class PostObserver
         private readonly PostSocialCardService $socialCards,
         private readonly PostVideoService $postVideoService,
         private readonly PostImageService $postImageService,
+        private readonly PostAudioService $postAudioService,
     ) {}
 
     public function updated(Post $post): void
@@ -36,17 +38,22 @@ class PostObserver
             && in_array($post->status, ['removed', 'flagged'], true);
         $expired = $post->wasChanged('status') && $post->status === 'expired';
 
-        if ($contentChanged || $becameUnavailable) {
+        if ($contentChanged || $becameUnavailable || $expired) {
             $this->shareMedia->invalidate($post);
         }
 
         if ($contentChanged || $becameUnavailable || $expired) {
             $this->socialCards->invalidate($post);
         }
-        if ($post->wasChanged('status') && in_array($post->status, ['removed', 'expired', 'flagged'], true)
-            && $post->image_path) {
+        if ($post->wasChanged('status') && in_array($post->status, ['removed', 'expired', 'flagged'], true)) {
+            $this->postAudioService->deleteForPost($post);
+            $this->postVideoService->deleteForPost($post);
             $this->postImageService->deleteForPost($post);
-            $post->fill($this->postImageService->emptyPayload())->saveQuietly();
+            $post->fill([
+                ...$this->postAudioService->emptyPayload(),
+                ...$this->postVideoService->emptyPayload(),
+                ...$this->postImageService->emptyPayload(),
+            ])->saveQuietly();
         }
     }
 
@@ -56,5 +63,6 @@ class PostObserver
         $this->socialCards->invalidate($post);
         $this->postVideoService->deleteForPost($post);
         $this->postImageService->deleteForPost($post);
+        $this->postAudioService->deleteForPost($post);
     }
 }

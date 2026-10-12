@@ -154,6 +154,23 @@ class CommentController extends Controller
 
     private function sendCommentPush(User $author, Post $post, Comment $comment): void
     {
+        $parentAuthor = $comment->parent?->author;
+
+        if ($parentAuthor && $parentAuthor->id !== $author->id && $parentAuthor->id !== $comment->tagged_user_id) {
+            app(PushNotificationService::class)->sendToUser(
+                $parentAuthor,
+                'Risposta al tuo commento su SpotOn',
+                $author->display_name.' ha risposto al tuo commento.',
+                [
+                    'type' => PushNotificationType::NEW_COMMENT,
+                    'post_id' => $post->id,
+                    'comment_id' => $comment->id,
+                    'parent_comment_id' => $comment->parent_id,
+                ],
+                $author,
+            );
+        }
+
         if ($comment->taggedUser && $comment->tagged_user_id !== $author->id) {
             app(PushNotificationService::class)->sendToUser(
                 $comment->taggedUser,
@@ -172,7 +189,7 @@ class CommentController extends Controller
 
         $post->loadMissing('author');
 
-        if ($post->author_id === $author->id) {
+        if ($post->author_id === $author->id || $post->author_id === $parentAuthor?->id) {
             return;
         }
 

@@ -4,8 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\Location;
 use App\Models\Post;
+use App\Models\PostShareMedia;
+use App\Models\Report;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminPostsWebTest extends TestCase
@@ -24,6 +27,26 @@ class AdminPostsWebTest extends TestCase
             ->assertSee('Post da controllare')
             ->assertSee($post->author->display_name)
             ->assertSee($post->location->name);
+    }
+
+    public function test_expired_filter_includes_posts_due_before_the_minute_job_runs(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $due = $this->makePost('Post appena scaduto', 'active');
+        $due->update(['expires_at' => now()->subMinute()]);
+        $this->makePost('Post ancora attivo', 'active');
+
+        $this->actingAs($admin)
+            ->get('/admin/posts?status=expired')
+            ->assertOk()
+            ->assertSee('Post appena scaduto')
+            ->assertSee('Scaduto')
+            ->assertDontSee('Post ancora attivo');
+
+        $this->get('/admin/posts?status=active')
+            ->assertOk()
+            ->assertSee('Post ancora attivo')
+            ->assertDontSee('Post appena scaduto');
     }
 
     public function test_admin_can_deactivate_and_reactivate_post(): void
@@ -50,6 +73,65 @@ class AdminPostsWebTest extends TestCase
             'id' => $post->id,
             'status' => 'active',
         ]);
+    }
+
+    public function test_only_admin_can_permanently_delete_post_and_all_attached_files(): void
+    {
+        Storage::fake('public');
+        $admin = User::factory()->create(['is_admin' => true]);
+        $user = User::factory()->create();
+        $post = $this->makePost('Post scaduto', 'expired');
+        $post->update(['expires_at' => now()->subMinute()]);
+        $imagePath = 'post-images/test.jpg';
+        $audioPath = 'post-audios/test.m4a';
+        $videoPath = 'post-videos/test.mp4';
+        $sharePath = 'share-videos/test.mp4';
+        $cardPath = "share-cards/{$post->id}-v1.png";
+
+        foreach ([$imagePath, $audioPath, $videoPath, $sharePath] as $path) {
+            Storage::disk('public')->put($path, 'test-file');
+        }
+
+        $post->update([
+            'image_disk' => 'public', 'image_path' => $imagePath,
+            'audio_disk' => 'public', 'audio_path' => $audioPath,
+            'video_disk' => 'public', 'video_path' => $videoPath,
+        ]);
+        Storage::disk('public')->put($cardPath, 'test-file');
+        $post->comments()->create(['author_id' => $user->id, 'text' => 'Commento da eliminare']);
+        $post->reports()->create([
+            'reporter_id' => $user->id,
+            'reason' => 'spam',
+            'status' => Report::STATUS_PENDING,
+        ]);
+        PostShareMedia::query()->create([
+            'post_id' => $post->id,
+            'template_version' => 'v1',
+            'status' => PostShareMedia::STATUS_READY,
+            'disk' => 'public',
+            'path' => $sharePath,
+        ]);
+
+        $this->actingAs($user)->delete("/admin/posts/{$post->id}")->assertForbidden();
+        $this->assertDatabaseHas('posts', ['id' => $post->id]);
+
+        $this->actingAs($admin)
+            ->get('/admin/posts?status=expired')
+            ->assertOk()
+            ->assertSee('Post scaduto')
+            ->assertSee('Elimina definitivamente');
+
+        $this->delete("/admin/posts/{$post->id}")
+            ->assertRedirect()
+            ->assertSessionHas('status', 'Post e file collegati eliminati definitivamente.');
+
+        $this->assertDatabaseMissing('posts', ['id' => $post->id]);
+        $this->assertDatabaseMissing('comments', ['post_id' => $post->id]);
+        $this->assertDatabaseMissing('reports', ['reportable_type' => 'post', 'reportable_id' => $post->id]);
+        $this->assertDatabaseMissing('post_share_media', ['post_id' => $post->id]);
+        foreach ([$imagePath, $audioPath, $videoPath, $sharePath, $cardPath] as $path) {
+            Storage::disk('public')->assertMissing($path);
+        }
     }
 
     public function test_admin_posts_use_compact_pagination_without_unstyled_svg_arrows(): void

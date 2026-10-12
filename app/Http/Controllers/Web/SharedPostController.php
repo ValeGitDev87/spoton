@@ -24,18 +24,11 @@ class SharedPostController extends Controller
             ? Str::limit(preg_replace('/\s+/', ' ', trim($publicContent->text($post))) ?: 'Un nuovo annuncio SpotOn.', 180)
             : 'Questo annuncio SpotOn non e piu disponibile.';
         $audioUrl = null;
-        $videoUrl = null;
 
         if ($available && $post->audio_url) {
             $audioUrl = Str::startsWith($post->audio_url, ['http://', 'https://'])
                 ? $post->audio_url
                 : asset(ltrim($post->audio_url, '/'));
-        }
-
-        if ($available && $post->video_url) {
-            $videoUrl = Str::startsWith($post->video_url, ['http://', 'https://'])
-                ? $post->video_url
-                : asset(ltrim($post->video_url, '/'));
         }
 
         $postImageUrl = null;
@@ -64,11 +57,8 @@ class SharedPostController extends Controller
             'postImageUrl' => $postImageUrl,
             'categoryLabel' => PostCategory::label($post->category),
             'title' => $available
-                ? ($videoUrl
-                    ? "Video di {$authorName} da {$post->location->name}"
-                    : ($audioUrl ? "Nota audio di {$authorName} da {$post->location->name}" : "{$authorName} su SpotOn"))
+                ? ($audioUrl ? "Nota audio di {$authorName} da {$post->location->name}" : "{$authorName} su SpotOn")
                 : 'Annuncio non disponibile',
-            'videoUrl' => $videoUrl,
         ]);
     }
 }

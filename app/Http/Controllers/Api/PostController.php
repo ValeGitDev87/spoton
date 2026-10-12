@@ -220,14 +220,6 @@ class PostController extends Controller
             ));
         }
 
-        if ($request->hasFile('video')) {
-            $post->update($postVideoService->store(
-                $post,
-                $request->file('video'),
-                (float) $request->validated('video_duration_seconds'),
-            ));
-        }
-
         if ($request->hasFile('image')) {
             try {
                 $post->update($postImageService->store($post, $request->file('image')));
@@ -301,15 +293,6 @@ class PostController extends Controller
             $post->update($postVideoService->emptyPayload());
         }
 
-        if ($request->hasFile('video')) {
-            $postVideoService->deleteForPost($post);
-            $post->update($postVideoService->store(
-                $post,
-                $request->file('video'),
-                (float) $request->validated('video_duration_seconds'),
-            ));
-        }
-
         if ($request->hasFile('image')) {
             $image = $postImageService->store($post, $request->file('image'));
             $postImageService->deleteForPost($post);
@@ -326,14 +309,11 @@ class PostController extends Controller
         ]);
     }
 
-    public function destroy(Request $request, Post $post, PostVideoService $postVideoService, PostImageService $postImageService): JsonResponse
+    public function destroy(Request $request, Post $post): JsonResponse
     {
         abort_unless($post->author_id === $request->user()->id || $request->user()->is_admin, 403);
 
         $post->update(['status' => 'removed']);
-        $postVideoService->deleteForPost($post);
-        $postImageService->deleteForPost($post);
-        $post->update($postVideoService->emptyPayload() + $postImageService->emptyPayload());
 
         return response()->json([
             'message' => 'OK',

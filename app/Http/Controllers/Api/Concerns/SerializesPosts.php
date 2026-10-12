@@ -53,13 +53,6 @@ trait SerializesPosts
                 'size_kb' => $post->audio_size_bytes ? round($post->audio_size_bytes / 1024, 1) : null,
                 'duration_seconds' => $post->audio_duration_seconds,
             ] : null,
-            'video' => $post->video_url ? [
-                'url' => $post->video_url,
-                'mime' => $post->video_mime,
-                'size_bytes' => $post->video_size_bytes,
-                'size_mb' => $post->video_size_bytes ? round($post->video_size_bytes / 1024 / 1024, 2) : null,
-                'duration_seconds' => $post->video_duration_seconds,
-            ] : null,
             'image' => $post->image_url ? [
                 'url' => $post->image_url,
                 'mime' => $post->image_mime,
