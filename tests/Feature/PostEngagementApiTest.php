@@ -7,6 +7,7 @@ use App\Models\Location;
 use App\Models\Post;
 use App\Models\PresenceSession;
 use App\Models\User;
+use App\Services\UserBlockService;
 use App\Support\PostCategory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -70,6 +71,60 @@ class PostEngagementApiTest extends TestCase
         $this
             ->getJson("/api/posts/{$post->id}/likes")
             ->assertUnauthorized();
+    }
+
+    public function test_empty_likes_list_has_zero_total(): void
+    {
+        $viewer = User::factory()->create();
+        $post = $this->makePost();
+
+        $this->actingAs($viewer, 'sanctum')
+            ->getJson("/api/posts/{$post->id}/likes")
+            ->assertOk()
+            ->assertJsonCount(0, 'data')
+            ->assertJsonPath('meta.total', 0);
+    }
+
+    public function test_blocked_users_are_absent_from_likes_list(): void
+    {
+        $viewer = User::factory()->create();
+        $visible = User::factory()->create();
+        $blocked = User::factory()->create();
+        $post = $this->makePost();
+        Like::query()->create(['post_id' => $post->id, 'user_id' => $visible->id]);
+        Like::query()->create(['post_id' => $post->id, 'user_id' => $blocked->id]);
+        app(UserBlockService::class)->block($viewer, $blocked);
+
+        $this->actingAs($viewer, 'sanctum')
+            ->getJson("/api/posts/{$post->id}/likes")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $visible->id)
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonMissing([$blocked->id]);
+    }
+
+    public function test_ghost_author_like_does_not_reveal_author_identity(): void
+    {
+        $owner = User::factory()->create([
+            'display_name' => 'Autore Segreto',
+            'avatar_url' => '/storage/profile-photos/secret.jpg',
+        ]);
+        $viewer = User::factory()->create();
+        $post = $this->makePost($owner);
+        $post->update(['is_anonymous' => true]);
+        Like::query()->create(['post_id' => $post->id, 'user_id' => $owner->id]);
+
+        $this->actingAs($viewer, 'sanctum')
+            ->getJson("/api/posts/{$post->id}/likes")
+            ->assertOk()
+            ->assertJsonPath('meta.total', 1)
+            ->assertJsonPath('data.0.id', null)
+            ->assertJsonPath('data.0.display_name', 'Ghost')
+            ->assertJsonPath('data.0.avatar_url', null)
+            ->assertJsonPath('data.0.is_anonymous', true)
+            ->assertDontSee('Autore Segreto')
+            ->assertDontSee('profile-photos/secret.jpg');
     }
 
     public function test_io_cero_owner_is_forbidden_and_other_user_can_toggle(): void

@@ -30,13 +30,18 @@ class PostEngagementController extends Controller
 
         return response()->json([
             'message' => 'OK',
-            'data' => collect($likes->items())->map(fn (Like $like) => [
-                'id' => $like->user->id,
-                'display_name' => $like->user->display_name,
-                'avatar_color' => $like->user->avatar_color,
-                'avatar_url' => $like->user->avatar_url,
-                'liked_at' => $like->created_at?->toISOString(),
-            ])->values(),
+            'data' => collect($likes->items())->map(function (Like $like) use ($post) {
+                $hiddenAuthor = $post->is_anonymous && $like->user_id === $post->author_id;
+
+                return [
+                    'id' => $hiddenAuthor ? null : $like->user->id,
+                    'display_name' => $hiddenAuthor ? 'Ghost' : $like->user->display_name,
+                    'avatar_color' => $hiddenAuthor ? null : $like->user->avatar_color,
+                    'avatar_url' => $hiddenAuthor ? null : $like->user->avatar_url,
+                    'is_anonymous' => $hiddenAuthor,
+                    'liked_at' => $like->created_at?->toISOString(),
+                ];
+            })->values(),
             'meta' => [
                 'current_page' => $likes->currentPage(),
                 'last_page' => $likes->lastPage(),
