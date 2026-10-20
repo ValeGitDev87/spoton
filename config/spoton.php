@@ -6,6 +6,8 @@ return [
         'location_id' => env('SPOTON_NAPOLI_INFO_LOCATION_ID'),
     ],
     'app_links' => [
+        'app_store_url' => env('SPOTON_APP_STORE_URL', 'https://apps.apple.com/it/app/spoton/id6807057516'),
+        'play_store_url' => env('SPOTON_PLAY_STORE_URL', 'https://play.google.com/store/apps/details?id=it.spotonapp.app'),
         'android_package' => env('SPOTON_ANDROID_PACKAGE', 'it.spotonapp.app'),
         'android_sha256_cert_fingerprints' => array_values(array_filter(array_map(
             'trim',

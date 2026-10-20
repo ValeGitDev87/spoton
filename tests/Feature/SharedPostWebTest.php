@@ -129,6 +129,48 @@ class SharedPostWebTest extends TestCase
             ->assertDontSee('Luca Segreto');
     }
 
+    public function test_mobile_visitors_get_the_verified_store_fallback(): void
+    {
+        $post = $this->createPost();
+
+        $this->withHeader('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)')
+            ->get("/p/{$post->id}")
+            ->assertOk()
+            ->assertSee('https://apps.apple.com/it/app/spoton/id6807057516', false)
+            ->assertSee("spoton://p/{$post->id}", false)
+            ->assertSee('visibilitychange');
+
+        $this->withHeader('User-Agent', 'Mozilla/5.0 (Linux; Android 15; Pixel 8)')
+            ->get("/p/{$post->id}")
+            ->assertOk()
+            ->assertSee('https://play.google.com/store/apps/details?id=it.spotonapp.app', false)
+            ->assertSee('visibilitychange');
+
+        $this->withHeader('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15) Mobile/15E148 Safari/604.1')
+            ->get("/p/{$post->id}")
+            ->assertOk()
+            ->assertSee('https://apps.apple.com/it/app/spoton/id6807057516', false);
+    }
+
+    public function test_crawlers_and_desktop_keep_the_public_page_and_open_graph(): void
+    {
+        $post = $this->createPost();
+
+        foreach ([
+            'facebookexternalhit/1.1',
+            'WhatsApp/2.24.1 iPhone',
+            'Googlebot/2.1 Android',
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0)',
+        ] as $userAgent) {
+            $this->withHeader('User-Agent', $userAgent)
+                ->get("/p/{$post->id}")
+                ->assertOk()
+                ->assertSee('property="og:image"', false)
+                ->assertSee('Ti ho visto davanti alla metro.')
+                ->assertDontSee('window.location.href');
+        }
+    }
+
     public function test_expired_or_removed_post_does_not_expose_content(): void
     {
         $post = $this->createPost([
@@ -138,11 +180,13 @@ class SharedPostWebTest extends TestCase
         ]);
 
         $this
+            ->withHeader('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)')
             ->get("/p/{$post->id}")
             ->assertOk()
             ->assertSee('Annuncio non disponibile')
             ->assertDontSee('Contenuto da non mostrare.')
-            ->assertDontSee('post-images/private.jpg');
+            ->assertDontSee('post-images/private.jpg')
+            ->assertDontSee('window.location.href');
     }
 
     public function test_app_association_files_are_emitted_only_when_configured(): void

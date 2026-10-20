@@ -109,6 +109,7 @@
         .unavailable p { color: #667085; line-height: 1.5; margin: 10px 0 0; }
         .footer-note { color: #667085; font-size: 13px; line-height: 1.5; margin: 20px auto 0; max-width: 520px; text-align: center; }
         .location-link { align-items: center; background: #fff; border: 1px solid #d0d5dd; border-radius: 7px; color: #111827; display: flex; font-size: 14px; font-weight: 750; justify-content: center; margin-top: 18px; min-height: 46px; padding: 10px 14px; text-decoration: none; }
+        .store-link { color: #475467; display: block; font-size: 13px; margin-top: 14px; text-align: center; }
         @media (max-width: 420px) {
             header { min-height: 62px; padding: 10px 14px; }
             .brand { font-size: 18px; }
@@ -174,6 +175,10 @@
 
             <a class="location-link" href="{{ $locationUrl }}">Vedi la bacheca di questo luogo</a>
 
+            @if ($storeUrl)
+                <a class="store-link" href="{{ $storeUrl }}">Scarica SpotOn dallo store</a>
+            @endif
+
             @if ($post->category === \App\Support\PostCategory::WEATHER_TRANSPORT)
                 <p class="footer-note">
                     {{ $post->community_status === 'verified' ? '✓ Verificato dalla Community. ' : '' }}
@@ -194,5 +199,19 @@
             </article>
         @endif
     </main>
+    @if ($storeUrl)
+        <script>
+            (() => {
+                let openedApp = false;
+                const markOpened = () => { if (document.hidden) openedApp = true; };
+                document.addEventListener('visibilitychange', markOpened);
+                window.addEventListener('pagehide', () => { openedApp = true; });
+                window.setTimeout(() => {
+                    if (!openedApp && !document.hidden) window.location.replace(@json($storeUrl));
+                }, 2200);
+                try { window.location.href = @json($appUrl); } catch (_) { /* Il timer apre lo store. */ }
+            })();
+        </script>
+    @endif
 </body>
 </html>

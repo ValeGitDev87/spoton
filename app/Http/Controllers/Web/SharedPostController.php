@@ -8,12 +8,14 @@ use App\Services\Media\PostSocialCardService;
 use App\Services\Media\PublicPostMediaContent;
 use App\Support\PostCategory;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 
 class SharedPostController extends Controller
 {
     public function __invoke(
         Post $post,
+        Request $request,
         PostSocialCardService $socialCards,
         PublicPostMediaContent $publicContent,
     ): View {
@@ -43,6 +45,23 @@ class SharedPostController extends Controller
             ? $imageUrl
             : asset(ltrim($imageUrl, '/'));
 
+        $userAgent = Str::lower($request->userAgent() ?? '');
+        $isCrawler = Str::contains($userAgent, [
+            'bot', 'crawler', 'spider', 'facebookexternalhit', 'facebot', 'whatsapp',
+            'telegrambot', 'twitterbot', 'linkedinbot', 'slackbot', 'discordbot',
+            'pinterest', 'preview',
+        ]);
+        $storeUrl = null;
+
+        if ($available && ! $isCrawler) {
+            if (Str::contains($userAgent, ['iphone', 'ipad', 'ipod'])
+                || (Str::contains($userAgent, 'macintosh') && Str::contains($userAgent, 'mobile/'))) {
+                $storeUrl = config('spoton.app_links.app_store_url');
+            } elseif (Str::contains($userAgent, 'android')) {
+                $storeUrl = config('spoton.app_links.play_store_url');
+            }
+        }
+
         return view('posts.share', [
             'appUrl' => "spoton://p/{$post->id}",
             'audioUrl' => $audioUrl,
@@ -55,6 +74,7 @@ class SharedPostController extends Controller
             'locationUrl' => route('locations.public', $post->location),
             'post' => $post,
             'postImageUrl' => $postImageUrl,
+            'storeUrl' => $storeUrl,
             'categoryLabel' => PostCategory::label($post->category),
             'title' => $available
                 ? ($audioUrl ? "Nota audio di {$authorName} da {$post->location->name}" : "{$authorName} su SpotOn")
