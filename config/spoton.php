@@ -1,6 +1,9 @@
 <?php
 
 return [
+    'posts' => [
+        'lifetime_hours' => max(1, (int) env('SPOTON_POST_LIFETIME_HOURS', 72)),
+    ],
     'napoli_info' => [
         'enabled' => env('SPOTON_NAPOLI_INFO_ENABLED', false),
         'location_id' => env('SPOTON_NAPOLI_INFO_LOCATION_ID'),

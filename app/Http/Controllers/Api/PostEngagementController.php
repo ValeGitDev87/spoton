@@ -7,8 +7,8 @@ use App\Models\Like;
 use App\Models\Post;
 use App\Models\PostCommunityVote;
 use App\Models\PostIWasThere;
-use App\Models\PresenceSession;
 use App\Services\UserBlockService;
+use App\Services\PostAccessService;
 use App\Support\PostCategory;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,7 +19,7 @@ class PostEngagementController extends Controller
 {
     public function likes(Request $request, Post $post): JsonResponse
     {
-        app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $post->author_id);
+        app(PostAccessService::class)->ensureVisible($post, $request->user());
         $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
         $perPage = min(max((int) $request->query('per_page', 25), 1), 50);
         $likes = $post->likes()
@@ -53,7 +53,7 @@ class PostEngagementController extends Controller
 
     public function toggleLike(Request $request, Post $post): JsonResponse
     {
-        app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $post->author_id);
+        app(PostAccessService::class)->ensureVisible($post, $request->user());
         $liked = DB::transaction(function () use ($request, $post): bool {
             $lockedPost = Post::query()->lockForUpdate()->findOrFail($post->id);
 
@@ -144,7 +144,7 @@ class PostEngagementController extends Controller
     public function communityVote(Request $request, Post $post): JsonResponse
     {
         abort_if($post->is_persistent_info && $post->author()->where('is_system', true)->exists(), 422, 'Gli avvisi ufficiali non sono verificabili dalla Community.');
-        app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $post->author_id);
+        app(PostAccessService::class)->ensureVisible($post, $request->user());
         $data = $request->validate([
             'vote' => ['required', 'string', Rule::in([
                 PostCommunityVote::VOTE_CONFIRM,
@@ -153,17 +153,7 @@ class PostEngagementController extends Controller
         ]);
 
         abort_unless($post->category === PostCategory::WEATHER_TRANSPORT, 422, 'La verifica Community e disponibile solo per Meteo e trasporti.');
-        abort_if($post->author_id === $request->user()->id, 403, 'Non puoi verificare una tua segnalazione.');
         abort_unless($post->isActive(), 422, 'Questa segnalazione non e piu attiva.');
-
-        $isPresent = PresenceSession::query()
-            ->where('user_id', $request->user()->id)
-            ->where('location_id', $post->location_id)
-            ->whereNull('ended_at')
-            ->where('last_ping_at', '>=', now()->subMinutes(5))
-            ->exists();
-
-        abort_unless($isPresent, 403, 'Devi essere presente nel luogo della segnalazione per votare.');
 
         $result = DB::transaction(function () use ($data, $request, $post): array {
             $lockedPost = Post::query()->lockForUpdate()->findOrFail($post->id);
@@ -185,16 +175,14 @@ class PostEngagementController extends Controller
                 ->where('vote', PostCommunityVote::VOTE_FALSE)
                 ->count();
 
-            $communityStatus = $falseCount >= 2
-                ? 'rejected'
-                : ($confirmCount >= 4 ? 'verified' : 'pending');
-            $status = $communityStatus === 'rejected' ? 'removed' : $lockedPost->status;
+            // Reactions are informational; moderation alone controls removal.
+            $communityStatus = 'pending';
+            $status = $lockedPost->status;
 
             $lockedPost->update([
                 'community_confirm_count' => $confirmCount,
                 'community_false_count' => $falseCount,
                 'community_status' => $communityStatus,
-                'status' => $status,
             ]);
 
             return [
@@ -208,9 +196,7 @@ class PostEngagementController extends Controller
         });
 
         return response()->json([
-            'message' => $result['community_status'] === 'rejected'
-                ? 'Segnalazione nascosta dalla Community.'
-                : 'Voto registrato.',
+            'message' => 'Voto registrato.',
             'data' => [
                 'community_vote_by_me' => $result['vote'],
                 'community_confirm_count' => $result['confirm_count'],

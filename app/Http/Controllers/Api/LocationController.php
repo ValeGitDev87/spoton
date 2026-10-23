@@ -23,31 +23,61 @@ class LocationController extends Controller
 
     public function index(Request $request): JsonResponse
     {
+        $data = $request->validate([
+            'lat' => ['nullable', 'required_with:lng', 'numeric', 'between:-90,90'],
+            'lng' => ['nullable', 'required_with:lat', 'numeric', 'between:-180,180'],
+            'page' => ['sometimes', 'integer', 'min:1'],
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:50'],
+        ]);
+        $hasCoordinates = isset($data['lat'], $data['lng']);
         $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
         $hiddenPostIds = $request->user()->hiddenPosts()->pluck('post_id');
-        $locations = Location::query()
-            ->withCount(['posts as active_stories_count' => fn (Builder $query) => $query
-                ->whereNotIn('author_id', $blockedIds)
-                ->whereNotIn('id', $hiddenPostIds)
-                ->visibleInStories()])
+        $query = Location::query()
+            ->withCount([
+                'posts as active_stories_count' => fn (Builder $query) => $query
+                    ->whereNotIn('author_id', $blockedIds)
+                    ->whereNotIn('id', $hiddenPostIds)
+                    ->visibleInStories(),
+                'presenceSessions as connected_now_count' => fn (Builder $query) => $query
+                    ->whereNull('ended_at')->where('last_ping_at', '>', now()->subMinutes(5)),
+            ])
             ->publiclyVisible()
             ->when($request->query('search'), function ($query, string $search): void {
                 $query->where(function ($inner) use ($search): void {
-                    $inner
-                        ->where('name', 'like', "%{$search}%")
-                        ->orWhere('city', 'like', "%{$search}%");
+                    $inner->where('name', 'like', "%{$search}%")->orWhere('city', 'like', "%{$search}%");
                 });
             })
             ->when($request->query('city'), fn ($query, string $city) => $query->where('city', $city))
-            ->when($request->query('type'), fn ($query, string $type) => $query->where('type', $type))
-            ->orderBy('city')
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Location $location) => $this->locationPayload($location));
+            ->when($request->query('type'), fn ($query, string $type) => $query->where('type', $type));
+
+        if ($hasCoordinates) {
+            // Cosine of the spherical distance: descending gives nearest first.
+            // Parameters are bound; compatible with SQLite and MySQL.
+            $query->orderByRaw(
+                '(SIN(latitude * ?) * ? + COS(latitude * ?) * COS((longitude - ?) * ?) * ?) DESC',
+                [M_PI / 180, sin(deg2rad($data['lat'])), M_PI / 180, $data['lng'], M_PI / 180, cos(deg2rad($data['lat']))],
+            );
+        }
+        $query->orderBy('city')->orderBy('name')->orderBy('id');
+        $serialize = fn (Location $location) => $this->locationPayload($location, $hasCoordinates
+            ? GeoDistance::kilometers((float) $data['lat'], (float) $data['lng'], (float) $location->latitude, (float) $location->longitude)
+            : null);
+
+        // Preserve the existing array contract for clients that do not request pagination.
+        if (! $request->has('per_page')) {
+            return response()->json(['message' => 'OK', 'data' => $query->get()->map($serialize)]);
+        }
+        $locations = $query->paginate($data['per_page']);
 
         return response()->json([
             'message' => 'OK',
-            'data' => $locations,
+            'data' => collect($locations->items())->map($serialize)->values(),
+            'meta' => [
+                'current_page' => $locations->currentPage(),
+                'last_page' => $locations->lastPage(),
+                'per_page' => $locations->perPage(),
+                'total' => $locations->total(),
+            ],
         ]);
     }
 

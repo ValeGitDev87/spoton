@@ -223,6 +223,8 @@ class CommunityLocationController extends Controller
     {
         $locations = Location::query()
             ->where('created_by_user_id', $request->user()->id)
+            ->withCount(['presenceSessions as connected_now_count' => fn ($query) => $query
+                ->whereNull('ended_at')->where('last_ping_at', '>', now()->subMinutes(5))])
             ->latest()
             ->paginate(min(50, max(1, (int) $request->query('per_page', 20))));
 

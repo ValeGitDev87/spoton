@@ -50,6 +50,14 @@
                     @endforeach
                 </select>
             </div>
+            <div>
+                <label for="community">Segnalazioni Community</label>
+                <select id="community" name="community">
+                    <option value="">Tutte</option>
+                    <option value="negative" @selected($community === 'negative')>Almeno 2 “Non è vero”</option>
+                    <option value="expiring" @selected($community === 'expiring')>In scadenza entro 12 ore</option>
+                </select>
+            </div>
             <button class="btn" type="submit">Filtra</button>
             <a class="btn secondary" href="{{ route('admin.posts.index') }}">Reset</a>
         </form>
@@ -82,12 +90,12 @@
                             {{ \App\Support\PostCategory::label($post->category) }}
                             @if ($post->category === \App\Support\PostCategory::WEATHER_TRANSPORT)
                                 <div style="color:#667085;font-size:12px;margin-top:4px;">
-                                    Conferme {{ $post->community_confirm_count }} · Falso/Risolto {{ $post->community_false_count }}
+                                    Conferma {{ $post->community_confirm_count }} · Non è vero {{ $post->community_false_count }}
                                 </div>
                                 @if ($post->community_status === 'verified')
-                                    <span class="badge status-active" style="margin-top:5px;">Verificato</span>
+                                    <span class="badge status-active" style="margin-top:5px;">Verificato (storico)</span>
                                 @elseif ($post->community_status === 'rejected')
-                                    <span class="badge status-removed" style="margin-top:5px;">Nascosto dalla Community</span>
+                                    <span class="badge status-removed" style="margin-top:5px;">Respinto dalla Community (storico)</span>
                                 @endif
                             @endif
                         </td>

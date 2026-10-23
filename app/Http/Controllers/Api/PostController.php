@@ -14,6 +14,7 @@ use App\Services\GeoDistance;
 use App\Services\PostAudioService;
 use App\Services\PostImageService;
 use App\Services\PostVideoService;
+use App\Services\PostAccessService;
 use App\Services\UserBlockService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -206,7 +207,7 @@ class PostController extends Controller
             ...$this->preparePostData($request->validated()),
             'author_id' => $request->user()->id,
             'mentions_everyone' => $mentionsEveryone,
-            'expires_at' => now()->addHours(48),
+            'expires_at' => now()->addHours(config('spoton.posts.lifetime_hours', 72)),
             'status' => 'active',
         ]);
 
@@ -255,7 +256,7 @@ class PostController extends Controller
 
     public function show(Request $request, Post $post): JsonResponse
     {
-        app(UserBlockService::class)->ensureInteractionAllowed($request->user()->id, $post->author_id);
+        app(PostAccessService::class)->ensureVisible($post, $request->user());
 
         return response()->json([
             'message' => 'OK',

@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Rules\AcceptableContent;
 use App\Services\Push\PushNotificationService;
+use App\Services\PostAccessService;
 use App\Services\UserBlockService;
 use App\Support\Push\PushNotificationType;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +21,7 @@ class CommentController extends Controller
 {
     public function index(Request $request, Post $post): JsonResponse
     {
+        app(PostAccessService::class)->ensureVisible($post, $request->user());
         $blockedIds = app(UserBlockService::class)->blockedUserIds($request->user()->id);
         $comments = $post->comments()
             ->with(['author', 'taggedUser', 'parent.author'])
@@ -42,6 +44,7 @@ class CommentController extends Controller
 
     public function store(Request $request, Post $post): JsonResponse
     {
+        app(PostAccessService::class)->ensureVisible($post, $request->user());
         $data = $request->validate([
             'text' => ['required', 'string', 'min:1', 'max:1000', new AcceptableContent],
             'parent_comment_id' => ['nullable', 'uuid'],

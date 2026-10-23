@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Web\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Post;
-use App\Support\PostCategory;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -36,6 +35,8 @@ class PostController extends Controller
                 fn ($query) => $query->where('status', $request->query('status')))
             ->when($request->query('category'), fn ($query, string $category) => $query->where('category', $category))
             ->when($request->query('location_id'), fn ($query, string $locationId) => $query->where('location_id', $locationId))
+            ->when($request->query('community') === 'negative', fn (Builder $query) => $query->where('community_false_count', '>=', 2))
+            ->when($request->query('community') === 'expiring', fn (Builder $query) => $query->currentlyActive()->where('expires_at', '<=', now()->addHours(12)))
             ->latest()
             ->paginate(20)
             ->withQueryString();
@@ -45,6 +46,7 @@ class PostController extends Controller
             'search' => $request->query('search', ''),
             'status' => $request->query('status', ''),
             'category' => $request->query('category', ''),
+            'community' => $request->query('community', ''),
             'expiredCount' => $expiredPosts->count(),
         ]);
     }
@@ -55,21 +57,7 @@ class PostController extends Controller
             'status' => ['required', 'in:active,expired,removed,flagged'],
         ]);
 
-        if (
-            $data['status'] === 'active'
-            && $post->category === PostCategory::WEATHER_TRANSPORT
-            && $post->community_status === 'rejected'
-        ) {
-            $post->communityVotes()->delete();
-            $post->update([
-                'status' => 'active',
-                'community_status' => 'pending',
-                'community_confirm_count' => 0,
-                'community_false_count' => 0,
-            ]);
-        } else {
-            $post->update(['status' => $data['status']]);
-        }
+        $post->update(['status' => $data['status']]);
 
         return back()->with('status', 'Stato post aggiornato.');
     }

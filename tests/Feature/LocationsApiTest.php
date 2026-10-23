@@ -46,6 +46,34 @@ class LocationsApiTest extends TestCase
             ->assertJsonPath('data.0.is_locked', false);
     }
 
+    public function test_database_locations_are_paginated_by_distance_and_mine_is_scoped_to_owner(): void
+    {
+        $viewer = User::factory()->create();
+        $other = User::factory()->create();
+        $ids = [];
+        for ($i = 0; $i < 9; $i++) {
+            $ids[] = Location::query()->create([
+                'name' => 'Luogo '.(9 - $i), 'short' => 'Luogo', 'city' => 'Napoli', 'type' => 'bar',
+                'latitude' => 40.85 + $i * 0.005, 'longitude' => 14.25,
+                'geo_radius_meters' => 100, 'is_active' => true,
+                'tier' => $i % 2 ? Location::TIER_COMMUNITY : Location::TIER_PARTNER,
+                'moderation_status' => Location::MODERATION_APPROVED,
+                'created_by_user_id' => $i < 2 ? $viewer->id : $other->id,
+            ])->id;
+        }
+        $this->actingAs($viewer, 'sanctum')
+            ->getJson('/api/locations?lat=40.85&lng=14.25&per_page=6')
+            ->assertOk()->assertJsonCount(6, 'data')->assertJsonPath('meta.total', 9)
+            ->assertJsonPath('meta.last_page', 2)->assertJsonPath('data.0.id', $ids[0])
+            ->assertJsonPath('data.5.id', $ids[5])->assertJsonPath('data.0.distance_km', 0);
+        $this->getJson('/api/locations?lat=40.85&lng=14.25&per_page=6&page=2')
+            ->assertOk()->assertJsonCount(3, 'data')->assertJsonPath('data.0.id', $ids[6]);
+        $this->getJson('/api/locations/mine?per_page=1')->assertOk()
+            ->assertJsonCount(1, 'data')->assertJsonPath('meta.total', 2)->assertJsonPath('meta.last_page', 2);
+        $this->getJson('/api/locations?lat=40.85&per_page=6')->assertUnprocessable();
+        $this->getJson('/api/locations?per_page=500')->assertUnprocessable();
+    }
+
     public function test_restricted_location_can_be_unlocked_with_its_password(): void
     {
         $user = User::factory()->create();

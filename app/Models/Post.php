@@ -158,9 +158,6 @@ class Post extends Model
 
     public function scopeVisibleInStories(Builder $query): Builder
     {
-        return $query->currentlyActive()->where(function (Builder $query): void {
-            $query->where('created_at', '>', now()->subHours(48))
-                ->orWhere('is_persistent_info', true);
-        });
+        return $query->currentlyActive();
     }
 }

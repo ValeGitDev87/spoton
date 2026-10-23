@@ -23,7 +23,7 @@ class SmartLocationLookupService
         [$latitude, $longitude] = $this->verifiedPosition($user);
         $existing = $this->existingLocations($latitude, $longitude);
 
-        if ($existing !== [] && ! $includeProvider) {
+        if (! $includeProvider) {
             Log::info('smart_location.lookup', [
                 'candidate_count' => count($existing),
                 'cell' => $this->cell($latitude, $longitude),

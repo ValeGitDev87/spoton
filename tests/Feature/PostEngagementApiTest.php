@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\UserBlockService;
 use App\Support\PostCategory;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PostEngagementApiTest extends TestCase
@@ -192,24 +193,19 @@ class PostEngagementApiTest extends TestCase
         }
     }
 
-    public function test_weather_vote_requires_a_recent_presence_at_the_post_location(): void
+    public function test_weather_vote_works_without_presence_or_nearby_coordinates(): void
     {
-        $viewer = User::factory()->create();
+        $viewer = User::factory()->create(['last_known_latitude' => 45.46, 'last_known_longitude' => 9.19]);
         $post = $this->makePost(category: PostCategory::WEATHER_TRANSPORT);
-
-        $this
-            ->actingAs($viewer, 'sanctum')
-            ->postJson("/api/posts/{$post->id}/community-vote", ['vote' => 'confirm'])
-            ->assertForbidden();
-
-        $this->markPresent($viewer, $post->location);
-
-        $this
-            ->actingAs($viewer, 'sanctum')
-            ->postJson("/api/posts/{$post->id}/community-vote", ['vote' => 'confirm'])
-            ->assertOk()
-            ->assertJsonPath('data.community_confirm_count', 1)
-            ->assertJsonPath('data.community_vote_by_me', 'confirm');
+        foreach (['confirm', 'false'] as $vote) {
+            $this->actingAs($viewer, 'sanctum')
+                ->postJson("/api/posts/{$post->id}/community-vote", ['vote' => $vote])
+                ->assertOk()->assertJsonPath('data.community_vote_by_me', $vote);
+        }
+        $this->assertDatabaseCount('presence_sessions', 0);
+        $this->postJson("/api/posts/{$post->id}/community-vote", ['vote' => 'false'])
+            ->assertOk()->assertJsonPath('data.community_false_count', 1);
+        $this->assertDatabaseCount('post_community_votes', 1);
     }
 
     public function test_official_persistent_info_cannot_be_removed_by_community_votes(): void
@@ -227,9 +223,12 @@ class PostEngagementApiTest extends TestCase
         $this->assertSame(0, $post->community_false_count);
     }
 
-    public function test_weather_votes_verify_then_hide_the_post_using_community_thresholds(): void
+    public function test_many_weather_reactions_do_not_remove_post_or_media(): void
     {
+        Storage::fake('public');
         $post = $this->makePost(category: PostCategory::WEATHER_TRANSPORT);
+        Storage::disk('public')->put('post-images/keep.jpg', 'photo');
+        $post->update(['image_disk' => 'public', 'image_path' => 'post-images/keep.jpg', 'image_url' => '/storage/post-images/keep.jpg']);
         $confirmers = User::factory()->count(4)->create();
 
         foreach ($confirmers as $index => $user) {
@@ -242,10 +241,10 @@ class PostEngagementApiTest extends TestCase
         }
 
         $response
-            ->assertJsonPath('data.community_status', 'verified')
+            ->assertJsonPath('data.community_status', 'pending')
             ->assertJsonPath('data.status', 'active');
 
-        $falseVoters = User::factory()->count(2)->create();
+        $falseVoters = User::factory()->count(8)->create();
 
         foreach ($falseVoters as $index => $user) {
             $this->markPresent($user, $post->location);
@@ -257,17 +256,20 @@ class PostEngagementApiTest extends TestCase
         }
 
         $response
-            ->assertJsonPath('data.community_status', 'rejected')
-            ->assertJsonPath('data.status', 'removed')
-            ->assertJsonPath('data.is_active', false);
+            ->assertJsonPath('data.community_status', 'pending')
+            ->assertJsonPath('data.status', 'active')
+            ->assertJsonPath('data.is_active', true);
 
         $this->assertDatabaseHas('posts', [
             'id' => $post->id,
             'community_confirm_count' => 4,
-            'community_false_count' => 2,
-            'community_status' => 'rejected',
-            'status' => 'removed',
+            'community_false_count' => 8,
+            'community_status' => 'pending',
+            'status' => 'active',
         ]);
+        Storage::disk('public')->assertExists('post-images/keep.jpg');
+        $this->getJson('/api/posts/feed')->assertOk()->assertJsonFragment(['id' => $post->id]);
+        $this->getJson("/api/locations/{$post->location_id}/stories")->assertOk()->assertJsonFragment(['id' => $post->id]);
     }
 
     public function test_weather_user_can_change_their_vote_without_duplicating_it(): void
@@ -287,7 +289,51 @@ class PostEngagementApiTest extends TestCase
             ->assertJsonPath('data.community_false_count', 1)
             ->assertJsonPath('data.community_vote_by_me', 'false');
 
+        $this->postJson("/api/posts/{$post->id}/community-vote", ['vote' => 'false'])
+            ->assertOk()->assertJsonPath('data.community_false_count', 1);
         $this->assertDatabaseCount('post_community_votes', 1);
+    }
+
+    public function test_owner_can_view_likes_and_react_to_accessible_own_post(): void
+    {
+        $owner = User::factory()->create();
+        $post = $this->makePost($owner, PostCategory::WEATHER_TRANSPORT);
+        $this->actingAs($owner, 'sanctum')->getJson("/api/posts/{$post->id}/likes")->assertOk();
+        $this->postJson("/api/posts/{$post->id}/community-vote", ['vote' => 'confirm'])->assertOk();
+    }
+
+    public function test_inaccessible_posts_reject_details_likes_comments_and_reactions(): void
+    {
+        $viewer = User::factory()->create();
+        $post = $this->makePost(category: PostCategory::WEATHER_TRANSPORT);
+        $this->actingAs($viewer, 'sanctum');
+        foreach (['expired', 'elapsed', 'removed', 'hidden', 'location'] as $reason) {
+            $post->update(['status' => in_array($reason, ['expired', 'removed']) ? $reason : 'active']);
+            $post->update(['expires_at' => $reason === 'elapsed' ? now()->subSecond() : now()->addHour()]);
+            if ($reason === 'hidden') $viewer->hiddenPosts()->create(['post_id' => $post->id]);
+            if ($reason === 'location') { $viewer->hiddenPosts()->delete(); $post->location->update(['is_active' => false]); }
+            $this->getJson("/api/posts/{$post->id}")->assertNotFound();
+            $this->getJson("/api/posts/{$post->id}/likes")->assertNotFound();
+            $this->getJson("/api/posts/{$post->id}/comments")->assertNotFound();
+            $this->postJson("/api/posts/{$post->id}/community-vote", ['vote' => 'false'])->assertNotFound();
+        }
+    }
+
+    public function test_block_between_author_and_viewer_blocks_reactions_and_likes_list(): void
+    {
+        $viewer = User::factory()->create();
+        $post = $this->makePost(category: PostCategory::WEATHER_TRANSPORT);
+        app(UserBlockService::class)->block($viewer, $post->author);
+        $this->actingAs($viewer, 'sanctum')->getJson("/api/posts/{$post->id}/likes")->assertForbidden();
+        $this->postJson("/api/posts/{$post->id}/community-vote", ['vote' => 'confirm'])->assertForbidden();
+    }
+
+    public function test_suspended_user_cannot_react(): void
+    {
+        $viewer = User::factory()->create(['is_suspended' => true]);
+        $post = $this->makePost(category: PostCategory::WEATHER_TRANSPORT);
+        $this->actingAs($viewer, 'sanctum')->postJson("/api/posts/{$post->id}/community-vote", ['vote' => 'false'])->assertForbidden();
+        $this->assertDatabaseCount('post_community_votes', 0);
     }
 
     private function makePost(?User $owner = null, string $category = PostCategory::SPOTTED_LOVE): Post

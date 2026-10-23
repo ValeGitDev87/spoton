@@ -13,7 +13,7 @@ class StoriesApiTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_location_stories_return_only_active_non_expired_posts_from_last_48_hours(): void
+    public function test_location_stories_follow_actual_expiry_including_posts_older_than_48_hours(): void
     {
         Carbon::setTestNow('2026-07-09 12:00:00');
 
@@ -25,7 +25,7 @@ class StoriesApiTest extends TestCase
         $second = $this->makePost($user, $location, 'Seconda storia', now()->subHour(), now()->addHours(23));
         $yesterday = $this->makePost($user, $location, 'Storia di ieri', now()->subHours(25), now()->addHour());
         $this->makePost($user, $location, 'Storia scaduta', now()->subHours(3), now()->subMinute());
-        $this->makePost($user, $location, 'Troppo vecchia', now()->subHours(49), now()->addHour());
+        $older = $this->makePost($user, $location, 'Ancora valida dopo 48 ore', now()->subHours(49), now()->addHour());
         $this->makePost($user, $otherLocation, 'Altra location', now()->subHour(), now()->addHour());
 
         $this
@@ -35,11 +35,12 @@ class StoriesApiTest extends TestCase
             ->assertJsonPath('data.location.id', $location->id)
             ->assertJsonPath('data.location.icon', 'location-outline')
             ->assertJsonPath('data.location.icon_library', 'ionicons')
-            ->assertJsonPath('data.location.stories_count', 3)
-            ->assertJsonCount(3, 'data.stories')
-            ->assertJsonPath('data.stories.0.id', $yesterday->id)
-            ->assertJsonPath('data.stories.1.id', $first->id)
-            ->assertJsonPath('data.stories.2.id', $second->id);
+            ->assertJsonPath('data.location.stories_count', 4)
+            ->assertJsonCount(4, 'data.stories')
+            ->assertJsonPath('data.stories.0.id', $older->id)
+            ->assertJsonPath('data.stories.1.id', $yesterday->id)
+            ->assertJsonPath('data.stories.2.id', $first->id)
+            ->assertJsonPath('data.stories.3.id', $second->id);
 
         Carbon::setTestNow();
     }

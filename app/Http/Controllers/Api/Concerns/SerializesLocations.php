@@ -28,7 +28,7 @@ trait SerializesLocations
             'is_active' => $location->is_active,
             'is_locked' => $location->is_locked,
             'stories_count' => (int) ($location->active_stories_count ?? 0),
-            'connected_now_count' => PresenceSession::query()
+            'connected_now_count' => $location->connected_now_count ?? PresenceSession::query()
                 ->where('location_id', $location->id)
                 ->whereNull('ended_at')
                 ->where('last_ping_at', '>', now()->subMinutes(5))

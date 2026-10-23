@@ -250,6 +250,7 @@ class PushNotificationApiTest extends TestCase
                 'post_id' => $post->id,
                 'comment_id' => $replyId,
                 'parent_comment_id' => $parent->id,
+                'notification_id' => \App\Models\UserNotification::query()->where('user_id', $iosToken->user_id)->value('id'),
             ];
         });
         Queue::assertPushed(SendExpoPushNotification::class, function (SendExpoPushNotification $job) use ($androidToken, $post, $replyId): bool {

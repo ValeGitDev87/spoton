@@ -35,7 +35,11 @@ class ExpirePostsJobTest extends TestCase
 
         $postVideoPath = 'post-videos/expired-test.mp4';
         $postAudioPath = 'post-audios/expired-test.m4a';
+        $postImagePath = 'post-images/expired-test.jpg';
         $expired = $this->makePost($user, $location, now()->subMinute(), 'active', [
+            'image_disk' => 'public',
+            'image_path' => $postImagePath,
+            'image_url' => '/storage/'.$postImagePath,
             'audio_disk' => 'public',
             'audio_path' => $postAudioPath,
             'audio_url' => '/storage/'.$postAudioPath,
@@ -54,6 +58,9 @@ class ExpirePostsJobTest extends TestCase
         Storage::disk('public')->put($shareVideoPath, 'share-video');
         Storage::disk('public')->put($postVideoPath, 'post-video');
         Storage::disk('public')->put($postAudioPath, 'post-audio');
+        Storage::disk('public')->put($postImagePath, 'post-image');
+        $persistent = $this->makePost($user, $location, now()->subMinute(), 'active');
+        $persistent->update(['is_persistent_info' => true, 'expires_at' => null]);
         PostShareMedia::query()->create([
             'post_id' => $expired->id,
             'template_version' => 'v1',
@@ -85,10 +92,14 @@ class ExpirePostsJobTest extends TestCase
         Storage::disk('public')->assertMissing($cardPath);
         Storage::disk('public')->assertMissing($postVideoPath);
         Storage::disk('public')->assertMissing($postAudioPath);
+        Storage::disk('public')->assertMissing($postImagePath);
+        $this->assertTrue($persistent->refresh()->isActive());
         Storage::disk('public')->assertMissing($shareVideoPath);
         $this->assertDatabaseMissing('post_share_media', ['post_id' => $expired->id]);
         $this->assertDatabaseHas('posts', [
             'id' => $expired->id,
+            'image_path' => null,
+            'image_url' => null,
             'video_path' => null,
             'video_url' => null,
             'audio_path' => null,

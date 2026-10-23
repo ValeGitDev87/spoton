@@ -46,7 +46,7 @@ class PostsApiTest extends TestCase
             ->assertJsonPath('data.is_owner', true);
 
         $this->assertEquals(
-            48,
+            72,
             abs(Carbon::parse($response->json('data.expires_at'))->diffInHours(now())),
         );
 

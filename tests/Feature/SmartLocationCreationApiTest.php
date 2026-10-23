@@ -49,12 +49,12 @@ class SmartLocationCreationApiTest extends TestCase
         $this->app->instance(PlaceProvider::class, $provider);
 
         $this->actingAs($user, 'sanctum')
-            ->getJson('/api/locations/nearby-candidates')
+            ->getJson('/api/locations/nearby-candidates?include_provider=1')
             ->assertOk()
             ->assertJsonPath('data.provider.0.name', 'Bar Sole');
 
         $this->actingAs($user, 'sanctum')
-            ->getJson('/api/locations/nearby-candidates')
+            ->getJson('/api/locations/nearby-candidates?include_provider=1')
             ->assertOk()
             ->assertJsonPath('data.provider.0.name', 'Bar Sole');
 
@@ -140,12 +140,49 @@ class SmartLocationCreationApiTest extends TestCase
         $this->app->instance(PlaceProvider::class, $provider);
 
         $this->actingAs($user, 'sanctum')
-            ->getJson('/api/locations/nearby-candidates')
+            ->getJson('/api/locations/nearby-candidates?include_provider=1')
             ->assertOk()
             ->assertJsonCount(0, 'data.existing')
             ->assertJsonCount(0, 'data.provider')
             ->assertJsonPath('data.provider_available', true)
             ->assertJsonPath('data.provider_failed', true);
+    }
+
+    public function test_empty_database_does_not_trigger_provider_without_explicit_flag(): void
+    {
+        $user = $this->positionedUser();
+        $provider = new FakePlaceProvider([$this->providerCandidate()]);
+        $this->app->instance(PlaceProvider::class, $provider);
+        $this->actingAs($user, 'sanctum')->getJson('/api/locations/nearby-candidates')
+            ->assertOk()->assertJsonCount(0, 'data.existing')->assertJsonCount(0, 'data.provider')
+            ->assertJsonPath('data.provider_available', true);
+        $this->actingAs($user, 'sanctum')->getJson('/api/locations?per_page=6&page=1&lat=40.84&lng=14.23')->assertOk();
+        $this->getJson('/api/locations/mine?per_page=6')->assertOk();
+        $this->assertSame(0, $provider->calls);
+    }
+
+    public function test_provider_flag_is_explicit_even_when_database_has_candidates(): void
+    {
+        $user = $this->positionedUser();
+        $this->location();
+        $provider = new FakePlaceProvider([$this->providerCandidate()]);
+        $this->app->instance(PlaceProvider::class, $provider);
+        $this->actingAs($user, 'sanctum')->getJson('/api/locations/nearby-candidates?include_provider=1')
+            ->assertOk()->assertJsonCount(1, 'data.existing')->assertJsonCount(1, 'data.provider');
+        $this->assertSame(1, $provider->calls);
+    }
+
+    public function test_candidate_token_rejects_another_user_tampering_and_expiry(): void
+    {
+        $user = $this->positionedUser();
+        $token = app(PlaceCandidateToken::class)->encode($this->providerCandidate(), $user->id);
+        $other = $this->positionedUser();
+        $this->actingAs($other, 'sanctum')->postJson('/api/locations', ['candidate_token' => $token])->assertUnprocessable();
+        $this->actingAs($user, 'sanctum')->postJson('/api/locations', ['candidate_token' => $token.'bad'])->assertUnprocessable();
+        $this->travel(11)->minutes();
+        $user->update(['last_location_update' => now()]);
+        $this->postJson('/api/locations', ['candidate_token' => $token])->assertUnprocessable();
+        $this->assertDatabaseCount('locations', 0);
     }
 
     private function positionedUser(): User

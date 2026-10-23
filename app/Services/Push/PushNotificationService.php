@@ -22,13 +22,17 @@ class PushNotificationService
         }
 
         if (($data['type'] ?? null) !== PushNotificationType::TEST) {
-            UserNotification::query()->create([
+            $notification = UserNotification::query()->create([
                 'user_id' => $user->id,
                 'type' => (string) ($data['type'] ?? 'general'),
                 'title' => $title,
                 'body' => $body,
                 'data' => $data,
             ]);
+        }
+
+        if (isset($notification) && in_array($data['type'] ?? null, [PushNotificationType::NEW_COMMENT, PushNotificationType::USER_MENTIONED], true)) {
+            $data['notification_id'] = $notification->id;
         }
 
         $tokenIds = $user->pushTokens()

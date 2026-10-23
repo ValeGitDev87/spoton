@@ -221,7 +221,20 @@ class AdminPostsWebTest extends TestCase
             ->assertDontSee('<svg', false);
     }
 
-    public function test_reactivating_a_community_rejected_post_resets_its_verification(): void
+    public function test_admin_can_filter_negative_reactions_and_expiring_posts(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $negative = $this->makePost('Molti voti negativi', 'active');
+        $negative->update(['category' => 'weather_transport', 'community_false_count' => 5, 'expires_at' => now()->addDay()]);
+        $expiring = $this->makePost('Scade tra poche ore', 'active');
+        $expiring->update(['expires_at' => now()->addHours(2)]);
+        $this->actingAs($admin)->get('/admin/posts?community=negative')->assertOk()
+            ->assertSee('Molti voti negativi')->assertDontSee('Scade tra poche ore')->assertSee('Non è vero 5');
+        $this->get('/admin/posts?community=expiring')->assertOk()
+            ->assertSee('Scade tra poche ore')->assertDontSee('Molti voti negativi');
+    }
+
+    public function test_admin_reactivation_preserves_community_reactions(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
         $post = $this->makePost('Segnalazione risolta', 'removed');
@@ -240,9 +253,9 @@ class AdminPostsWebTest extends TestCase
         $this->assertDatabaseHas('posts', [
             'id' => $post->id,
             'status' => 'active',
-            'community_status' => 'pending',
-            'community_confirm_count' => 0,
-            'community_false_count' => 0,
+            'community_status' => 'rejected',
+            'community_confirm_count' => 1,
+            'community_false_count' => 2,
         ]);
     }
 
